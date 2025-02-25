@@ -1,4 +1,6 @@
 import reflex as rx
+
+from Paraprobar.models.excel_data import ExcelData
 from ..backend.table_state import Item, TableState
 from ..components.status_badge import status_badge
 
@@ -65,28 +67,15 @@ def _header_cell(text: str, icon: str) -> rx.Component:
         ),
     )
 
+def _show_item(item: ExcelData, index: int) -> rx.Component:
+    bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
+    hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
 
-def _show_item(item: Item, index: int) -> rx.Component:
-    bg_color = rx.cond(
-        #para las filas cuando no se selecciona
-        index % 2 == 0,
-        rx.color("gray", 1),
-        rx.color("accent", 2),
-    )
-    hover_color = rx.cond(
-        #para las filas cuando se selecciona
-        index % 2 == 0,
-        rx.color("gray", 3),
-        rx.color("accent", 3),
-    )
     return rx.table.row(
-        #permite mostrar los datos de la tabla 
-        rx.table.row_header_cell(item.pipeline),
-        rx.table.cell(item.workflow),
-        rx.table.cell(status_badge(item.status)),
-        rx.table.cell(item.timestamp),
-        rx.table.cell(item.duration),
-        rx.table.cell(_dialog_group(item)),
+        rx.table.cell(item.id),
+        rx.table.cell(item.nombre),
+        rx.table.cell(item.edad),  # Convertimos edad a string
+        rx.table.cell(item.email),
         style={"_hover": {"bg": hover_color}, "bg": bg_color},
         align="center",
     )
@@ -291,7 +280,7 @@ def main_table() -> rx.Component:
                     _header_cell("Action", "cog"),
                 ),
             ),
-            rx.table.body(
+            rx.table.body( 
                 rx.foreach(
                     TableState.get_current_page,
                     lambda item, index: _show_item(item, index),

@@ -102,20 +102,16 @@ def navbar_footer() -> rx.Component:
 
 
 def menu_button() -> rx.Component:
-    # Consigue todas las páginas decoradas y añádelas al menú.
     from reflex.page import get_decorated_pages
 
-    # Las rutas de las paginas ordenadas
     ordered_page_routes = [
         "/",
         "/about",
         "/settings",
     ]
 
-    # Obtener las páginas decoradas.
     pages = get_decorated_pages()
 
-    # Incluir todas las páginas incluso si no están en ordered_page_routes.
     ordered_pages = sorted(
         pages,
         key=lambda page: (
@@ -126,17 +122,20 @@ def menu_button() -> rx.Component:
     )
     #Da la funcionalidad al sidebar
     return rx.drawer.root(
-        rx.drawer.trigger(#Permite sobreponer el sidebar
-            rx.icon("align-justify"),
-        ),
+        rx.drawer.trigger(rx.icon("align-justify")),
         rx.drawer.overlay(z_index="5"),
         rx.drawer.portal(
             rx.drawer.content(
                 rx.vstack(
                     rx.hstack(
+                        rx.color_mode_cond(
+                        rx.image(src="/Logo_white.png", height="2em"),
+                        rx.image(src="/Logo_black.png", height="2em"),
+                        ),
                         rx.spacer(),
                         rx.drawer.close(rx.icon(tag="x")),
                         justify="start",
+                            align_items="center", 
                         width="100%",
                     ),
                     rx.divider(),
@@ -154,8 +153,8 @@ def menu_button() -> rx.Component:
                     spacing="4",
                     width="100%",
                 ),
-                top="auto",
-                left="auto",
+                top="0",  # Asegura que el sidebar comienza desde arriba
+                left="0",  # Fija el sidebar a la izquierda
                 height="100%",
                 width="20em",
                 padding="1em",
@@ -163,9 +162,8 @@ def menu_button() -> rx.Component:
             ),
             width="100%",
         ),
-        direction="right",
+        direction="left",  # Asegura que el sidebar se abre a la izquierda
     )
-
 
 def navbar() -> rx.Component:
     """El Navbar.
@@ -180,12 +178,12 @@ def navbar() -> rx.Component:
             menu_button(),
             # El logo.
             rx.color_mode_cond(
-                rx.image(src="/reflex_black.svg", height="1em"),
-                rx.image(src="/reflex_white.svg", height="1em"),
+                rx.image(src="/Logo_white.png", height="3em"),
+                rx.image(src="/Logo_black.png", height="3em"),
             ),
             align="center",
             width="100%",
-            padding_y="1.25em",
+            padding_y=".60em",
             padding_x=["1em", "1em", "2em"],
         ),
         display=["block", "block", "block", "block", "block", "none"],

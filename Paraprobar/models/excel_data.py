@@ -8,6 +8,7 @@ class User(rx.Model, table=True):
     edad: int
     email: str
 
+#prueba
 class ExcelData(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     nombre: str

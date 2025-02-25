@@ -4,7 +4,7 @@ from typing import List
 import pandas as pd
 import io
 from sqlmodel import Session
-from ..repository.database import engine  
+from ..repository.database import select_all,engine      
 from ..models import ExcelData  
 
 import reflex as rx
@@ -21,7 +21,7 @@ class Item(rx.Base):
 class TableState(rx.State):
     """La clase State."""
 
-    items: List[Item] = []
+    items: List[ExcelData] = []
 
     search_value: str = ""
     sort_value: str = ""
@@ -76,8 +76,9 @@ class TableState(rx.State):
             1 if self.total_items % self.limit else 0
         )
 
+    #tabla
     @rx.var(cache=True, initial_value=[])
-    def get_current_page(self) -> list[Item]:
+    def get_current_page(self) -> list[ExcelData]:
         start_index = self.offset
         end_index = start_index + self.limit
         return self.filtered_sorted_items[start_index:end_index]
@@ -95,44 +96,67 @@ class TableState(rx.State):
 
     def last_page(self):
         self.offset = (self.total_pages - 1) * self.limit
-
+            
+    #cargar datos de bd
     def load_entries(self):
-        with Path("data.csv").open(encoding="utf-8") as file:
-            reader = csv.DictReader(file)
-            self.items = [Item(**row) for row in reader]
-            self.total_items = len(self.items)
+        try:
+            datos_db = select_all()  # Obtiene los datos desde la base de datos
+            print(f"Datos obtenidos: {datos_db}")  # Debugging
 
+            self.items = [
+                ExcelData(
+                    id=item.id,
+                    nombre=item.nombre,
+                    edad=item.edad,
+                    email=item.email,
+                )
+                for item in datos_db
+            ]
+
+            self.total_items = len(self.items)
+            print(f"Se cargaron {self.total_items} registros desde la base de datos.")
+
+        except Exception as e:
+            print(f"Error al cargar los datos de la base de datos: {e}")        
+            
     def toggle_sort(self):
         self.sort_reverse = not self.sort_reverse
         self.load_entries()
 
     def handle_upload(self, files: list):
         """Maneja la subida de archivos."""
-        if files:
-            # Los archivos subidos son objetos de tipo bytes
-            file_data = files[0]  # Accedemos a los datos binarios del archivo
-            self.uploaded_file_name = "archivo_subido.xlsx"  # Nombre genérico para el archivo
+        if not files:
+            print("No se subió ningún archivo.")
+            self.upload_success = False
+            return  # Salir de la función si no hay archivos
 
-            # Leer el archivo Excel desde los datos binarios
-            try:
-                # Usamos io.BytesIO para manejar los datos binarios como un archivo
-                with io.BytesIO(file_data) as file_stream:
-                    df = pd.read_excel(file_stream)
-                    print("Datos del Excel:", df)
+        file_data = files[0]  # Accedemos a los datos binarios del archivo
+        self.uploaded_file_name = "archivo_subido.xlsx"  # Nombre genérico para el archivo
 
-                    # Guardar los datos en la base de datos
-                    with Session(engine) as session:
-                        for _, row in df.iterrows():
-                            data = ExcelData(
-                                nombre=row["Nombre"],
-                                edad=row["Edad"],
-                                email=row["Email"]
-                            )
-                            session.add(data)
-                        session.commit()
+        try:
+            with io.BytesIO(file_data) as file_stream:
+                df = pd.read_excel(file_stream)
 
-                    self.upload_success = True
-                    print("Datos guardados en la base de datos.")
-            except Exception as e:
-                print("Error al procesar el archivo:", e)
-                self.upload_success = False
+                # Validar que las columnas esperadas existen en el archivo
+                required_columns = {"Nombre", "Edad", "Email"}
+                if not required_columns.issubset(df.columns):
+                    print("Error: El archivo no tiene las columnas esperadas.")
+                    self.upload_success = False
+                    return
+
+                # Guardar los datos en la base de datos
+                with Session(engine) as session:
+                    for _, row in df.iterrows():
+                        data = ExcelData(
+                            nombre=row["Nombre"],
+                            edad=row["Edad"],
+                            email=row["Email"]
+                        )
+                        session.add(data)
+                    session.commit()
+
+                self.upload_success = True
+                print("Datos guardados en la base de datos.")
+        except Exception as e:
+            print("Error al procesar el archivo:", e)
+            self.upload_success = False
