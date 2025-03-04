@@ -2,7 +2,8 @@ import reflex as rx
 
 from ..backend.table_state import TableState
 from ..templates import template
-from ..views.table import file_upload
+from ..views.table_entregables import file_upload
+from ..views.table_reglas import file_upload_reglas
 
 @template(route="/agregar", title="Agregar Datos")
 def agregar() -> rx.Component:
@@ -20,6 +21,46 @@ def agregar() -> rx.Component:
             align_items="center",
         ),
         file_upload(),
+        spacing="2",
+        width="100%",
+    )
+    
+@template(route="/agregarReglas", title="Agregar Reglas")
+def agregarReglas() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Subir el excel de datos de las REGLAS", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/reglas"),  
+                color_scheme="blue",
+                variant="solid",
+                size="2", 
+            ),
+            spacing="9",  
+            align_items="center",
+        ),
+        file_upload_reglas(),
+        spacing="2",
+        width="100%",
+    )
+
+@template(route="/agregarEntregables", title="Agregar Entregables")
+def agregarEntregables() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Subir el excel de datos para los entregables", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/"),  
+                color_scheme="blue",
+                variant="solid",
+                size="2", 
+            ),
+            spacing="9",  
+            align_items="center",
+        ),
+        file_upload_reglas(),
         spacing="2",
         width="100%",
     )

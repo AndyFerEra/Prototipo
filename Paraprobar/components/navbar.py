@@ -29,9 +29,9 @@ def menu_item(text: str, url: str) -> rx.Component:
         rx.hstack(
             rx.match(
                 text,
-                ("Listado de entregables", menu_item_icon("layout-dashboard")),
-                ("About", menu_item_icon("book-open")),
-                ("Settings", menu_item_icon("settings")),
+                ("Entregables", menu_item_icon("layers")),
+                ("Proyectos", menu_item_icon("folders")),
+                ("Reglas", menu_item_icon("scale")),
                 menu_item_icon("layout-dashboard"),
             ),
             rx.text(text, size="4", weight="regular"),
@@ -81,8 +81,8 @@ def navbar_footer() -> rx.Component:
     """
     return rx.hstack(
         rx.link(
-            rx.text("Docs", size="3"),
-            href="https://reflex.dev/docs/getting-started/introduction/",
+            rx.text("Configuración", size="3"),
+            href="/settings",
             color_scheme="gray",
             underline="none",
         ),
@@ -106,20 +106,24 @@ def menu_button() -> rx.Component:
 
     ordered_page_routes = [
         "/",
-        "/about",
-        "/settings",
+        "/proyectos",
+        "/reglas",
     ]
 
     pages = get_decorated_pages()
 
-    ordered_pages = sorted(
+    """ ordered_pages = sorted(
         pages,
         key=lambda page: (
             ordered_page_routes.index(page["route"])
             if page["route"] in ordered_page_routes
             else len(ordered_page_routes)
         ),
-    )
+    )""" 
+    ordered_pages = [
+    page for page in pages if page["route"] in ordered_page_routes
+    
+    ]
     #Da la funcionalidad al sidebar
     return rx.drawer.root(
         rx.drawer.trigger(rx.icon("align-justify")),
@@ -128,15 +132,16 @@ def menu_button() -> rx.Component:
             rx.drawer.content(
                 rx.vstack(
                     rx.hstack(
-                        rx.color_mode_cond(
-                        rx.image(src="/Logo_white.png", height="2em"),
-                        rx.image(src="/Logo_black.png", height="2em"),
+                        rx.color_mode_cond(      
+                            rx.image(src="/Logo_white.png", height="2em"),
+                            rx.image(src="/Logo_black.png", height="2em"),
                         ),
                         rx.spacer(),
                         rx.drawer.close(rx.icon(tag="x")),
                         justify="start",
-                            align_items="center", 
+                        align_items="center", 
                         width="100%",
+                        
                     ),
                     rx.divider(),
                     *[#Añade las paginas al sidebar
@@ -153,6 +158,7 @@ def menu_button() -> rx.Component:
                     spacing="4",
                     width="100%",
                 ),
+                
                 top="0",  # Asegura que el sidebar comienza desde arriba
                 left="0",  # Fija el sidebar a la izquierda
                 height="100%",
@@ -188,7 +194,10 @@ def navbar() -> rx.Component:
         ),
         display=["block", "block", "block", "block", "block", "none"],
         position="sticky",
-        background_color=rx.color("gray", 1),
+        background_color=rx.color_mode_cond(
+            "#BCBCBC",
+            rx.color("gray", 1),  
+        ),
         top="0px",
         z_index="5",
         border_bottom=styles.border,
