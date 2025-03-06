@@ -149,7 +149,12 @@ def extract_text_from_pdf(pdf_path):
 # Función principal para procesar el PDF
 def process_pdf(pdf_path, modelo):
     # Abrir el PDF
-    doc = fitz.open(pdf_path)
+    try:
+        doc = fitz.open(pdf_path)
+        print(f"PDF cargado: {pdf_path}, Número de páginas: {len(doc)}")
+    except Exception as e:
+        print(f"Error al abrir el archivo PDF: {e}")
+
     num_pages = len(doc)
 
     if num_pages > 1:

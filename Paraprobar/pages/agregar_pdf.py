@@ -1,8 +1,7 @@
 import reflex as rx
-
-from ..backend.table_state import TableState
 from ..templates import template
-from ..views.table import file_upload
+from ..views.pdf_box import file_upload_PDF
+from ..backend.pdf_state import TableStatePDF 
 
 @template(route="/agregar_pdf", title="Agregar PDF")
 def agregar_pdf() -> rx.Component:
@@ -10,16 +9,24 @@ def agregar_pdf() -> rx.Component:
         rx.hstack(
             rx.heading("Subir un nuevo PDF de datos", size="5"),
             rx.button(
-                "REGRESAR",
-                on_click=rx.redirect("/"),  
+                "Limpiar",
+                rx.icon("eraser", size=20, color="white"),
+                on_click=[
+                    TableStatePDF.reset_states,
+                    rx.redirect("/agregar_pdf"),
+                ],
                 color_scheme="blue",
                 variant="solid",
-                size="2", 
+                size="2",
+                color="white",
+                background_color="#e9004c",
             ),
-            spacing="9",  
+            spacing="9",
             align_items="center",
+            margin_bottom="1rem",
         ),
-        file_upload(),
+        file_upload_PDF(),
         spacing="2",
         width="100%",
     )
+

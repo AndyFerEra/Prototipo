@@ -149,46 +149,35 @@ def file_upload() -> rx.Component:
         rx.upload(
             rx.box(
                 rx.vstack(
-                    rx.icon("file-up", size=48, color="#2563EB"),
+                    rx.icon("file-up", size=48, color="#2563EB"),  # Nuevo ícono
                     rx.text("Arrastra y suelta tu archivo aquí", font_size="1.2rem", font_weight="bold", color="#1F2937"),
                     rx.text("o haz clic para seleccionar un archivo", font_size="0.9rem", color="#4B5563"),
                 ),
-                padding="1rem",
+                padding="1rem",  # Reducir el padding
                 border="2px dashed #2563EB",
                 border_radius="12px",
-                height="200px",
+                height="200px",  # Reducir la altura
                 width="100%",
                 display="flex",
                 align_items="center",
                 justify_content="center",
-                background_color="#E5E7EB",
+                background_color="#E5E7EB",  # Fondo gris claro para mejorar contraste
                 _hover={"background_color": "#D1D5DB"},
             ),
             multiple=False,
-            on_drop=TableState.handle_upload_pdf,
+            on_drop=TableState.handle_upload,
         ),
         rx.cond(
             TableState.upload_success,
             rx.text("Archivo subido y procesado correctamente.", color="green", margin_top="1rem"),
-            rx.text("Esperando archivo...", color="#374151", margin_top="1rem"),
+            rx.text("Esperando archivo...", color="#374151", margin_top="1rem"),  # Texto oscuro para contraste
         ),
-        rx.cond(
-            TableState.extracted_data,
-            rx.vstack(
-                rx.input(value=TableState.codigo_proyecto, on_change=TableState.set_codigo_proyecto),
-                rx.input(value=TableState.disciplina, on_change=TableState.set_disciplina),
-                rx.input(value=TableState.clasificacion_entregable, on_change=TableState.set_clasificacion_entregable),
-                rx.input(value=TableState.tipo_entregable, on_change=TableState.set_tipo_entregable),
-                rx.input(value=TableState.codigo_entregable, on_change=TableState.set_codigo_entregable),
-                rx.button("Corregir y Guardar", on_click=TableState.corregir_valores),
-            ),
-        ),
-        padding="1rem",
+        padding="1rem",  # Reducir el padding
         width="100%",
-        max_width="400px",
+        max_width="400px",  # Reducir el ancho máximo
         border_radius="12px",
         box_shadow="lg",
-        background_color="#F3F4F6",
+        background_color="#F3F4F6",  # Fondo gris suave
         margin="auto",
     )
     
