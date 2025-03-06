@@ -7,6 +7,10 @@ from sqlmodel import Session
 from ..repository.database import select_all,engine      
 from ..models import ExcelData  
 
+from PyPDF2 import PdfReader
+from collections import Counter
+import re
+
 import reflex as rx
 
 class Item(rx.Base):
@@ -160,3 +164,33 @@ class TableState(rx.State):
         except Exception as e:
             print("Error al procesar el archivo:", e)
             self.upload_success = False
+            
+class PdfState(rx.State):
+    metadata_list: list[dict] = []  # Almacena todos los metadatos
+    status: str = ""
+
+    async def handle_upload(self, files: list[rx.UploadFile]):
+        for file in files:
+            try:
+                content = await file.read()
+                metadata = self.extract_pdf_metadata(content)
+                self.metadata_list.append(metadata)
+                self.status = f"PDF {file.filename} procesado con éxito!"
+            except Exception as e:
+                self.status = f"Error procesando {file.filename}: {str(e)}"
+
+    def extract_pdf_metadata(self, content: bytes) -> dict:
+        # Extraer metadatos básicos
+        pdf = PdfReader(io.BytesIO(content))
+        metadata = pdf.metadata
+        # Extraer texto para palabras clave (ejemplo: palabras más repetidas)
+        text = " ".join([page.extract_text() for page in pdf.pages])
+        words = re.findall(r'\b\w+\b', text.lower())
+        keywords = [word for word, count in Counter(words).most_common(5)]
+        
+        return {
+            "title": metadata.get("/Title", "Sin título"),
+            "author": metadata.get("/Author", "Desconocido"),
+            "year": metadata.get("/CreationDate", "N/A")[:4] if metadata.get("/CreationDate") else "N/A",
+            "keywords": keywords,
+        }
