@@ -1,15 +1,33 @@
 import reflex as rx
-from backend.table_state import PdfState  
+from Paraprobar.backend.table_state import PdfState  
+from Paraprobar.templates import template  
 
-def subir_pdf_page():
+@template(route="/subir-pdf", title="Subir PDF")  
+def subir_pdf() -> rx.Component:
     return rx.vstack(
+        rx.hstack(
+            rx.heading("Subir PDF", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/"),  
+                color_scheme="blue",
+                variant="solid",
+                size="2", 
+            ),
+            spacing="9",  
+            align_items="center",
+        ),
         rx.upload(
             rx.text("Arrastra y suelta tu PDF aquí o haz clic para seleccionar"),
             border="1px dashed #ccc",
             padding="4rem",
+            id="pdf_upload",  # Identificador 
         ),
-        rx.button("Procesar PDF", on_click=PdfState.handle_upload),
-        rx.text(PdfState.status),  
-        spacing="2rem",
-        padding="2rem",
+        rx.button(
+            "Procesar PDF",
+            on_click=PdfState.handle_upload(rx.upload_files(upload_id="pdf_upload")),  # Pasa los archivos
+        ),
+        rx.text(PdfState.status),
+        spacing="2",
+        width="100%",
     )

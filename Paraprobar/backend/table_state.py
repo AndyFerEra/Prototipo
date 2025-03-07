@@ -166,10 +166,10 @@ class TableState(rx.State):
             self.upload_success = False
             
 class PdfState(rx.State):
-    metadata_list: list[dict] = []  # Almacena todos los metadatos
+    metadata_list: list[dict] = [] 
     status: str = ""
 
-    async def handle_upload(self, files: list[rx.UploadFile]):
+    async def handle_upload(self, files: list[rx.UploadFile]):  #
         for file in files:
             try:
                 content = await file.read()
@@ -180,13 +180,11 @@ class PdfState(rx.State):
                 self.status = f"Error procesando {file.filename}: {str(e)}"
 
     def extract_pdf_metadata(self, content: bytes) -> dict:
-        # Extraer metadatos básicos
         pdf = PdfReader(io.BytesIO(content))
         metadata = pdf.metadata
-        # Extraer texto para palabras clave (ejemplo: palabras más repetidas)
         text = " ".join([page.extract_text() for page in pdf.pages])
-        words = re.findall(r'\b\w+\b', text.lower())
-        keywords = [word for word, count in Counter(words).most_common(5)]
+        words = re.findall(r'\b\w+\b', text.lower()) if text else []
+        keywords = [word for word, count in Counter(words).most_common(5)] if words else []
         
         return {
             "title": metadata.get("/Title", "Sin título"),
