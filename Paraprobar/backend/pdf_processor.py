@@ -146,30 +146,28 @@ def extract_text_from_pdf(pdf_path):
     except Exception as e:
         raise Exception(f"Error al extraer texto del PDF: {e}")
 
-# Función principal para procesar el PDF
-def process_pdf(pdf_path, modelo):
-    # Abrir el PDF
+# Función para determinar si el PDF es un documento o un plano
+def is_pdf_document(pdf_path):
     try:
         doc = fitz.open(pdf_path)
-        print(f"PDF cargado: {pdf_path}, Número de páginas: {len(doc)}")
+        page = doc.load_page(0)
+        text = page.get_text()
+        return len(text) > 100  # Si hay más de 100 caracteres, es probable que sea un documento
     except Exception as e:
-        print(f"Error al abrir el archivo PDF: {e}")
+        print(f"Error al determinar el tipo de PDF: {e}")
+        return False
 
-    num_pages = len(doc)
-
-    if num_pages > 1:
-        # Si el PDF tiene más de una página, extraer texto de la primera página
-        print("El PDF tiene más de una página. Extrayendo texto de la primera página...")
+# Función principal para procesar el PDF
+def process_pdf(pdf_path, modelo):
+    # Determinar si el PDF es un documento o un plano
+    if is_pdf_document(pdf_path):
+        print("El PDF es un documento. Extrayendo texto...")
         text = extract_text_from_pdf(pdf_path)
     else:
-        # Si el PDF tiene solo una página, convertirla a imagen
-        print("El PDF tiene una sola página. Convirtiendo a imagen...")
+        print("El PDF es un plano. Convirtiendo a imagen y extrayendo texto...")
         imagen_path = pdf_a_imagen(pdf_path)
         if imagen_path:
-            # Encontrar la ROI y extraer texto
-            print("Extrayendo texto de la ROI...")
             text = detectar_roi_y_extraer_texto(imagen_path, modelo)
-            # Eliminar la imagen temporal
             os.remove(imagen_path)
         else:
             text = None

@@ -1,7 +1,7 @@
 import reflex as rx
 from ..templates import template
 from ..views.pdf_box import file_upload_PDF
-from ..backend.pdf_state import TableStatePDF 
+from ..backend.pdf_state import TableStatePDF
 
 @template(route="/agregar_pdf", title="Agregar PDF")
 def agregar_pdf() -> rx.Component:
@@ -29,4 +29,3 @@ def agregar_pdf() -> rx.Component:
         spacing="2",
         width="100%",
     )
-

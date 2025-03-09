@@ -4,38 +4,38 @@ from ..backend.pdf_state import TableStatePDF
 def file_upload_PDF() -> rx.Component:
     return rx.box(
         rx.heading("Subir PDF", size="3", margin_bottom="1rem", color="#e9004c"),
-        rx.upload(
-            rx.box(
-                rx.vstack(
-                    rx.icon("file-up", size=48, color="#e9004c"),
-                    rx.text("Arrastra y suelta tu archivo aquí", font_size="1.2rem", font_weight="bold", color="#1F2937"),
-                    rx.text("o haz clic para seleccionar un archivo", font_size="0.9rem", color="#4B5563"),
-                    align_items="center",
-                    justify_content="center",
-                ),
+        rx.vstack(
+            rx.upload(
+                rx.button("Seleccionar archivo", background_color="#374151",color="white",),
+                border="1px dashed #ccc",
                 padding="1rem",
-                border="2px dashed #e9004c",
-                border_radius="12px",
-                height="200px",
-                width="100%",
-                display="flex",
-                align_items="center",
-                justify_content="center",
-                background_color="#E5E7EB",
-                _hover={"background_color": "#D1D5DB"},
+                border_radius="4px",
             ),
-            multiple=True,
-            accept=".pdf",
-            on_drop=lambda files: print("Archivos subidos:", files) or TableStatePDF.handle_upload_pdf(files),
-        ),
-        rx.cond(
-            TableStatePDF.upload_success,
-            rx.hstack(
-                rx.icon("circle_check", size=20, color="#374151", margin_top="0.1rem",),
-                rx.text("Archivo subido y procesado correctamente.", color="#374151", font_weight="bold"),
+            rx.button(
+                "Subir archivo",
+                on_click=TableStatePDF.handle_upload(rx.upload_files()),
                 margin_top="1rem",
+                background_color="#e9004c",
+                color="white",
             ),
-            rx.text("Esperando archivo...", color="#374151", margin_top="1rem", font_weight="bold"),
+            rx.cond(
+                TableStatePDF.uploaded_file,
+                rx.vstack(
+                    rx.hstack(
+                        rx.icon("circle_check", size=20, color="#374151", margin_top="0.1rem",),
+                        rx.text(f"Archivo subido: {TableStatePDF.uploaded_file}", font_weight="bold", color="#1e252b"),
+                    ),
+                    rx.html(
+                        f"""
+                        <div>
+                            <iframe src="http://localhost:8001/static/uploads/{TableStatePDF.uploaded_file}" width="250%" height="500px" style="border: none;"></iframe>
+                        </div>
+                        """
+                    ),
+                    spacing="2",
+                ),
+            ),
+            spacing="2",
         ),
         rx.cond(
             TableStatePDF.extracted_data,
@@ -252,7 +252,7 @@ def file_upload_PDF() -> rx.Component:
             ),
         ),
         padding="1rem",
-        width="100%",
+        width="200%",
         max_width="800px",
         border_radius="12px",
         box_shadow="lg",
