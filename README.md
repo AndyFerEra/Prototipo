@@ -69,3 +69,10 @@ to organize your state.
 
 You can either define substates in their own files, or if the state is
 specific to a page, you can define it in the page file itself.
+
+### Important
+To run correctly you must enable the file server, preferably on port 8001 according to the code [It can be changed]. 
+It must be inside the main folder called [Paraprobar]
+```bash
+...\Prototipo\Paraprobar> python -m http.server 8001
+```
