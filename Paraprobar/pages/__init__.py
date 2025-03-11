@@ -3,5 +3,6 @@ from .dashboard import dashboard
 from .settings import settings
 from .agregar import agregar
 from .agregar_pdf import agregar_pdf
+from .entregables import entregables
 
-__all__ = ["about", "dashboard", "settings","agregar", "agregar_pdf"]
+__all__ = ["about", "dashboard", "settings","agregar", "agregar_pdf", "entregables"]

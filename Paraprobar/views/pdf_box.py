@@ -44,6 +44,7 @@ def file_upload_PDF() -> rx.Component:
                     rx.hstack(
                         rx.text("Nombre del Entregable:", width="150px", align="left", font_weight="bold", color="#1e252b"),
                         rx.input(
+                            value=TableStatePDF.nombre_entregable,
                             on_change=TableStatePDF.set_nombre_entregable,
                             placeholder="Nombre del Entregable",
                             aling="right",
@@ -220,6 +221,36 @@ def file_upload_PDF() -> rx.Component:
                         width="100%",
                         justify_content="space-between",
                     ),
+                    rx.hstack(
+                        rx.text("Total HH:", width="150px", align="left", font_weight="bold", color="#1e252b"),
+                        rx.input(
+                            value=TableStatePDF.total_hh,
+                            on_change=TableStatePDF.set_total_hh,
+                            placeholder="Total HH",
+                            aling="right",
+                            width="70%",
+                        ),
+                        rx.tooltip(
+                            rx.icon(
+                                "circle_alert",
+                                size=20,
+                                color="#e9004c",
+                                display=rx.cond(
+                                    TableStatePDF.total_hh == "",
+                                    "flex",
+                                    "none"
+                                ),
+                            ),
+                            content="Debe rellenar el campo Total de HH",
+                            placement="top",
+                            background_color="#e9004c",
+                            color="white",
+                            border_radius="6px",
+                            padding="0.5rem",
+                        ),
+                        width="100%",
+                        justify_content="space-between",
+                    ),
                     rx.center(
                         rx.button(
                             "Corregir y Guardar",
@@ -235,7 +266,8 @@ def file_upload_PDF() -> rx.Component:
                                 (TableStatePDF.disciplina == "") |
                                 (TableStatePDF.clasificacion_entregable == "") |
                                 (TableStatePDF.tipo_entregable == "") |
-                                (TableStatePDF.codigo_entregable == ""),
+                                (TableStatePDF.codigo_entregable == "") |
+                                (TableStatePDF.total_hh == ""),
                                 True,
                                 False
                             ),

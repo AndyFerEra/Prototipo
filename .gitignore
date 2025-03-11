@@ -10,3 +10,4 @@
 Paraprobar/__pycache__/Paraprobar.cpython-312.pyc
 __pycache__/
 assets/external/
+.env

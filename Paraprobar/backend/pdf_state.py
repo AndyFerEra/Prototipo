@@ -3,6 +3,8 @@ import os
 from .pdf_processor import process_pdf
 from ultralytics import YOLO
 from typing import List
+from ..repository.database import get_session
+from ..models.entregable_model import Entregable
 
 # Cargar el modelo YOLO
 ruta_modelo = os.path.join(os.path.dirname(__file__), "modelos", "best.pt")
@@ -18,10 +20,12 @@ class TableStatePDF(rx.State):
     clasificacion_entregable: str = ""
     tipo_entregable: str = ""
     codigo_entregable: str = ""
+    total_hh: str = ""
     extracted_data: bool = False
     uploaded_file_path: str = ""
     uploaded_file: str = ""  # Nombre del archivo subido
     file_url: str = ""  # URL del archivo subido
+    
 
     async def handle_upload(self, files: List[rx.UploadFile]):
         """Maneja la subida de archivos y los guarda en la carpeta de uploads."""
@@ -79,18 +83,36 @@ class TableStatePDF(rx.State):
         self.clasificacion_entregable = ""
         self.tipo_entregable = ""
         self.codigo_entregable = ""
+        self.total_hh = ""
         self.extracted_data = False
         self.uploaded_file = ""
         self.file_url = ""
         print("Estados restablecidos.")
 
     def corregir_valores(self):
-        """Corrige los valores extraídos del PDF."""
-        print("Valores corregidos:", {
-            "Nombre del entregable": self.nombre_entregable,
-            "Código de proyecto": self.codigo_proyecto,
-            "Disciplina": self.disciplina,
-            "Clasificación de entregable": self.clasificacion_entregable,
-            "Tipo de entregable": self.tipo_entregable,
-            "Código de entregable": self.codigo_entregable
-        })
+        """Corrige los valores extraídos del PDF, convierte total_hh a float e inserta los datos en la base de datos."""
+
+        try:
+            # Convertir total_hh a float
+            Total_h = float(self.total_hh)
+        except ValueError:
+            print(f"Error: el valor de total_hh ('{self.total_hh}') no se pudo convertir a float.")
+            return  # Salir del método si la conversión falla
+
+        datos = {
+            "nombre_entregable": self.nombre_entregable,
+            "codigo_proyecto": self.codigo_proyecto,
+            "disciplina": self.disciplina,
+            "clasificacion_entregable": self.clasificacion_entregable,
+            "tipo_entregable": self.tipo_entregable,
+            "codigo_entregable": self.codigo_entregable,
+            "total_hh": Total_h,
+        }
+        print("Valores corregidos y total_hh convertido a float:", datos)
+
+        # Insertar datos en la base de datos
+        with get_session() as session:
+            entregable = Entregable(**datos)
+            session.add(entregable)
+            session.commit()
+            print("Datos insertados correctamente en la base de datos.")

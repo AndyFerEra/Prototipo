@@ -76,3 +76,20 @@ It must be inside the main folder called [Paraprobar]
 ```bash
 ...\Prototipo\Paraprobar> python -m http.server 8001
 ```
+
+### Ruta de carga de PDF entregables
+-> backend/pdf_processor.py
+-> backend/pdf_state.py
+-> pages/agregar_pdf.py
+-> repository/database.py
+-> static/pdfjs
+-> static/uploads
+-> views/pdf_box.py
+
+### Ruta de Base de Datos entregables
+-> backend/table_entregables_state.py
+-> models/entregable_model.py
+-> pages/entregables.py
+-> pages/__init__.py
+-> repository/database.py
+-> views/table_entregables.py
