@@ -1,74 +1,82 @@
-# Welcome to Reflex!
+# API de Extracción de Información de PDFs
+Esta API permite extraer y clasificar información de archivos PDF, como códigos de proyecto, disciplinas, clasificaciones de entregables y más. Utiliza modelos de machine learning y técnicas de procesamiento de texto e imágenes para realizar estas tareas.
 
-This is the base Reflex template - installed when you run `reflex init`.
-
-If you want to use a different template, pass the `--template` flag to `reflex init`.
-For example, if you want a more basic starting point, you can run:
-
+## Estructura del Proyecto
 ```bash
-reflex init --template blank
-```
-
-## About this Template
-
-This template has the following directory structure:
-
-```bash
-├── README.md
+├── __pycache__
+│  └── rxconfig.cpython-39.pyc
+├── .web
+│  ├── components
+│  ├── public
+│  └── utils
+├── api_extraccion
+│  ├── __init__.py
+│  ├── modelos
+│  │   ├── best.pt          # Modelo YOLO para detección de ROI
+│  │   ├── modelos_entrenados.pkl  # Modelos de ML entrenados
+│  └── api_extraccion.py    # Código principal de la API
 ├── assets
-├── rxconfig.py
-└── {your_app}
-    ├── __init__.py
-    ├── components
-    │   ├── __init__.py
-    │   ├── navbar.py
-    │   └── sidebar.py
-    ├── pages
-    │   ├── __init__.py
-    │   ├── about.py
-    │   ├── dashboard.py
-    │   └── settings.py
-    ├── styles.py
-    ├── templates
-    │   ├── __init__.py
-    │   └── template.py
-    └── {your_app}.py
+│  └── favicon.ico
+├── .gitignore
+├── requeriments.txt        # Dependencias del proyecto
+└── rxconfig.py
 ```
 
-See the [Project Structure docs](https://reflex.dev/docs/getting-started/project-structure/) for more information on general Reflex project structure.
-
-### Adding Pages
-
-In this template, the pages in your app are defined in `{your_app}/pages/`.
-Each page is a function that returns a Reflex component.
-For example, to edit this page you can modify `{your_app}/pages/index.py`.
-See the [pages docs](https://reflex.dev/docs/pages/routes/) for more information on pages.
-
-In this template, instead of using `rx.add_page` or the `@rx.page` decorator,
-we use the `@template` decorator from `{your_app}/templates/template.py`.
-
-To add a new page:
-
-1. Add a new file in `{your_app}/pages/`. We recommend using one file per page, but you can also group pages in a single file.
-2. Add a new function with the `@template` decorator, which takes the same arguments as `@rx.page`.
-3. Import the page in your `{your_app}/pages/__init__.py` file and it will automatically be added to the app.
-4. Order the pages in `{your_app}/components/sidebar.py` and `{your_app}/components/navbar.py`.
+## Requisitos Previos
+Python 3.9 o superior: Asegúrate de tener Python instalado. Puedes verificarlo con:
 
 
-### Adding Components
+## Instalación de Dependencias:
+Instala las dependencias necesarias usando el archivo requirements.txt:
+```bash
+pip install -r requirements.txt
+```
 
-In order to keep your code organized, we recommend putting components that are
-used across multiple pages in the `{your_app}/components/` directory.
+## Instrucciones para Ejecutar la API
+```bash
+cd api_extraccion
+python api_extraccion.py
+```
 
-In this template, we have a sidebar component in `{your_app}/components/sidebar.py`.
+La API estará disponible en http://127.0.0.1:8000. Puedes probarla usando:
+Endpoint raíz: GET / (Mensaje de bienvenida).
+Procesar PDF: POST /procesar-pdf/ (Sube un archivo PDF para extraer información).
 
-### Adding State
+## Dependencias (requirements.txt)
+Asegúrate de que tu archivo requirements.txt contenga las siguientes dependencias:
+```bash
+fastapi==0.95.2
+uvicorn==0.22.0
+torch==2.0.1
+transformers==4.30.2
+joblib==1.2.0
+pymupdf==1.22.5
+opencv-python==4.7.0.72
+easyocr==1.6.2
+numpy==1.24.3
+scikit-learn==1.2.2
+python-multipart==0.0.6
+```
 
-As your app grows, we recommend using [substates](https://reflex.dev/docs/substates/overview/)
-to organize your state.
+## Para generar o actualizar el archivo requirements.txt, puedes usar:
+```bash
+pip freeze > requirements.txt
+```
 
-You can either define substates in their own files, or if the state is
-specific to a page, you can define it in the page file itself.
+## Notas Adicionales
+
+Modelo YOLO:
+El archivo best.pt en la carpeta modelos es el modelo YOLO preentrenado para detectar regiones de interés (ROI) en las imágenes. Asegúrate de que esté correctamente ubicado.
+
+Modelos de Machine Learning:
+Los modelos de clasificación (modelos_entrenados.pkl) deben estar en la carpeta modelos. Estos modelos se cargan automáticamente al iniciar la API.
+
+PDFs con Múltiples Páginas:
+Si el PDF tiene más de una página, la API solo procesará la primera página. Para procesar páginas adicionales, puedes modificar el código en api_extraccion.py.
+
+PDFs con Imágenes:
+La API convierte la primera página del PDF en una imagen si el PDF tiene una sola página. Luego, utiliza EasyOCR para extraer texto de las regiones de interés detectadas por YOLO.
+
 
 ### Important
 To run correctly you must enable the file server, preferably on port 8001 according to the code [It can be changed]. 
