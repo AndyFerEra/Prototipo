@@ -1,0 +1,174 @@
+excel data py
+
+from sqlmodel import SQLModel, Field
+import reflex as rx
+from typing import Optional
+from pydantic import BaseModel
+
+class User(rx.Model, table=True):
+    id: Optional [int] = Field(default=None, primary_key=True)
+    nombre: str
+    edad: int
+    email: str
+
+#prueba
+class ExcelData(SQLModel, table=True):
+    id: int = Field(default=None, primary_key=True)
+    nombre: str
+    edad: int
+    email: str
+    
+class PdfMetadata(BaseModel):
+    title: str
+    author: str
+    year: str
+    keywords: list[str]
+
+
+------------------------
+
+actualizar el init para agregar pdf metadata
+
+from .excel_data import ExcelData
+from .excel_data import User
+from .excel_data import PdfMetadata
+
+
+---------------------------------
+
+agregar pdf state en table state.py
+
+# ... existing code ...
+
+from PyPDF2 import PdfReader
+from collections import Counter
+import re
+
+from ..models.excel_data import PdfMetadata
+
+# ... existing code ...
+
+class PdfState(rx.State):
+    metadata_list: list[PdfMetadata] = []
+    status: str = ""
+
+    async def handle_upload(self, files: list[rx.UploadFile]):
+        for file in files:
+            try:
+                content = await file.read()
+                metadata = self.extract_pdf_metadata(content)
+                self.metadata_list.append(PdfMetadata(**metadata))
+                self.status = f"PDF {file.filename} procesado con éxito!"
+            except Exception as e:
+                self.status = f"Error procesando {file.filename}: {str(e)}"
+
+    def extract_pdf_metadata(self, content: bytes) -> dict:
+        pdf = PdfReader(io.BytesIO(content))
+        metadata = pdf.metadata
+        text = " ".join([page.extract_text() or "" for page in pdf.pages])  # Evita None
+        words = re.findall(r'\b\w+\b', text.lower()) 
+        keywords = [word for word, _ in Counter(words).most_common(5)] if words else []
+        
+        return {
+            "title": metadata.get("/Title", "Sin título") if metadata else "Sin título",
+            "author": metadata.get("/Author", "Desconocido") if metadata else "Desconocido",
+            "year": metadata.get("/CreationDate", "N/A")[:4] if metadata and metadata.get("/CreationDate") else "N/A",
+            "keywords": keywords,
+        }
+
+
+-----------------------------------
+
+subir pdf.py
+
+
+import reflex as rx
+from ..backend.table_state import PdfState
+from ..templates import template
+
+@template(route="/subir-pdf", title="Subir PDF")
+def subir_pdf() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Subir PDF", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/"),
+                color_scheme="blue",
+                variant="solid",
+                size="2",
+            ),
+            spacing="9",
+            align_items="center",
+        ),
+        rx.upload(
+            rx.text("Arrastra y suelta tu PDF aquí o haz clic para seleccionar"),
+            border="1px dashed #ccc",
+            padding="4rem",
+            id="pdf_upload",
+        ),
+        rx.button(
+            "Procesar PDF",
+            on_click=PdfState.handle_upload(rx.upload_files(upload_id="pdf_upload")),
+        ),
+        rx.text(PdfState.status),
+        spacing="2",
+        width="100%",
+    )
+
+
+-----------------------------------
+
+visualizar metadatos.py
+
+import reflex as rx
+from ..backend.table_state import PdfState
+from ..templates import template
+
+@template(route="/visualizar-metadatos", title="Metadatos de PDFs")
+def visualizar_metadatos() -> rx.Component:
+    return rx.box(
+        rx.heading("Metadatos de PDFs", size="5"),
+        rx.foreach(
+            PdfState.metadata_list,
+            lambda metadata: rx.card(
+                rx.text(f"Título: {metadata.title}"),
+                rx.text(f"Autor: {metadata.author}"),
+                rx.text(f"Año: {metadata.year}"),
+                rx.cond(
+                    len(metadata.keywords) > 0,
+                    rx.text(
+                        "Palabras clave: " + 
+                        ", ".join([kw for kw in metadata.keywords])
+                    ),
+                    rx.text("Palabras clave: Ninguna"),
+                ),
+                width="100%",
+                margin="0.5em",
+            ),
+        ),
+        padding="2rem",
+    )
+
+
+-----------------------------------
+
+actualizar init.py
+
+# ... existing code ...
+from .subir_pdf import subir_pdf
+from .visualizar_metadatos import visualizar_metadatos
+
+# Update the __all__ list to include the new pages
+__all__ = ["subir_pdf", "visualizar_metadatos"] 
+
+
+-----------------------------------
+
+pip install pyPDF2
+
+
+-----------------------------------
+
+
+
