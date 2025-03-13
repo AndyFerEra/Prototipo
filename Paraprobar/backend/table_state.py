@@ -1,50 +1,43 @@
 import csv
-from pathlib import Path
-from typing import List
 import pandas as pd
 import io
 from sqlmodel import Session
-from ..repository.database import select_all,engine      
-from ..models import ExcelData  
-
-from PyPDF2 import PdfReader
-from collections import Counter
-import re
-
-from ..models.excel_data import PdfMetadata
-
+from typing import List, Dict, Any
 import reflex as rx
 
-class Item(rx.Base):
-    """La clase Item."""
-
-    pipeline: str
-    status: str
-    workflow: str
-    timestamp: str
-    duration: str
+from ..repository.database import select_all, engine
+from ..models import ExcelData
+from ..repository.storage import save_uploaded_excel, get_file_list, EXCEL_DIR
 
 class TableState(rx.State):
-    """La clase State."""
+    """Estado para manejar tablas y archivos Excel."""
 
     items: List[ExcelData] = []
-
+    excel_data: List[Dict[str, Any]] = []
+    excel_columns: List[str] = []
+    
     search_value: str = ""
     sort_value: str = ""
     sort_reverse: bool = False
 
     total_items: int = 0
     offset: int = 0
-    limit: int = 12  # Número de filas por página
+    limit: int = 12  
 
     uploaded_file_name: str = ""
     upload_success: bool = False
+    current_excel_path: str = ""
+    excel_files: list[dict] = []
+
+    def on_load(self):
+        """Cargar datos al iniciar."""
+        self.load_entries()
+        self.excel_files = get_file_list(EXCEL_DIR)
 
     @rx.var(cache=True)
-    def filtered_sorted_items(self) -> List[Item]:
+    def filtered_sorted_items(self) -> List[ExcelData]:
         items = self.items
 
-        # Filtrar elementos basados en el valor de ordenación seleccionado
         if self.sort_value:
             items = sorted(
                 items,
@@ -52,7 +45,6 @@ class TableState(rx.State):
                 reverse=self.sort_reverse,
             )
 
-        # Filtrar elementos basados en el valor de búsqueda
         if self.search_value:
             search_value = self.search_value.lower()
             items = [
@@ -60,13 +52,7 @@ class TableState(rx.State):
                 for item in items
                 if any(
                     search_value in str(getattr(item, attr)).lower()
-                    for attr in [
-                        "pipeline",
-                        "status",
-                        "workflow",
-                        "timestamp",
-                        "duration",
-                    ]
+                    for attr in ["nombre", "edad", "email"]
                 )
             ]
 
@@ -82,7 +68,6 @@ class TableState(rx.State):
             1 if self.total_items % self.limit else 0
         )
 
-    #tabla
     @rx.var(cache=True, initial_value=[])
     def get_current_page(self) -> list[ExcelData]:
         start_index = self.offset
@@ -103,12 +88,11 @@ class TableState(rx.State):
     def last_page(self):
         self.offset = (self.total_pages - 1) * self.limit
             
-    #cargar datos de bd
     def load_entries(self):
+        """Cargar entradas de la base de datos."""
         try:
-            datos_db = select_all()  # Obtiene los datos desde la base de datos
-            print(f"Datos obtenidos: {datos_db}")  # Debugging
-
+            datos_db = select_all()
+            
             self.items = [
                 ExcelData(
                     id=item.id,
@@ -120,8 +104,7 @@ class TableState(rx.State):
             ]
 
             self.total_items = len(self.items)
-            print(f"Se cargaron {self.total_items} registros desde la base de datos.")
-
+            
         except Exception as e:
             print(f"Error al cargar los datos de la base de datos: {e}")        
             
@@ -129,68 +112,46 @@ class TableState(rx.State):
         self.sort_reverse = not self.sort_reverse
         self.load_entries()
 
-    def handle_upload(self, files: list):
-        """Maneja la subida de archivos."""
-        if not files:
-            print("No se subió ningún archivo.")
-            self.upload_success = False
-            return  # Salir de la función si no hay archivos
-
-        file_data = files[0]  # Accedemos a los datos binarios del archivo
-        self.uploaded_file_name = "archivo_subido.xlsx"  # Nombre genérico para el archivo
-
-        try:
-            with io.BytesIO(file_data) as file_stream:
-                df = pd.read_excel(file_stream)
-
-                # Validar que las columnas esperadas existen en el archivo
-                required_columns = {"Nombre", "Edad", "Email"}
-                if not required_columns.issubset(df.columns):
-                    print("Error: El archivo no tiene las columnas esperadas.")
-                    self.upload_success = False
-                    return
-
-                # Guardar los datos en la base de datos
-                with Session(engine) as session:
-                    for _, row in df.iterrows():
-                        data = ExcelData(
-                            nombre=row["Nombre"],
-                            edad=row["Edad"],
-                            email=row["Email"]
-                        )
-                        session.add(data)
-                    session.commit()
-
-                self.upload_success = True
-                print("Datos guardados en la base de datos.")
-        except Exception as e:
-            print("Error al procesar el archivo:", e)
-            self.upload_success = False
-            
-class PdfState(rx.State):
-    metadata_list: list[PdfMetadata] = []
-    status: str = ""
-
     async def handle_upload(self, files: list[rx.UploadFile]):
-        for file in files:
-            try:
-                content = await file.read()
-                metadata = self.extract_pdf_metadata(content)
-                self.metadata_list.append(PdfMetadata(**metadata))
-                self.status = f"PDF {file.filename} procesado con éxito!"
-            except Exception as e:
-                self.status = f"Error procesando {file.filename}: {str(e)}"
-
-    def extract_pdf_metadata(self, content: bytes) -> dict:
-        pdf = PdfReader(io.BytesIO(content))
-        metadata = pdf.metadata
-        text = " ".join([page.extract_text() or "" for page in pdf.pages])  # Evita None
-        words = re.findall(r'\b\w+\b', text.lower()) 
-        keywords = [word for word, _ in Counter(words).most_common(5)] if words else []
-        
-        return {
-            "title": metadata.get("/Title", "Sin título") if metadata else "Sin título",
-            "author": metadata.get("/Author", "Desconocido") if metadata else "Desconocido",
-            "year": metadata.get("/CreationDate", "N/A")[:4] if metadata and metadata.get("/CreationDate") else "N/A",
-            "keywords": keywords,
-        }
+        """Maneja la subida de archivos Excel."""
+        if not files:
+            self.upload_success = False
+            return
+            
+        file = files[0]
+        try:
+            content = await file.read()
+            
+            excel_path = save_uploaded_excel(content, file.filename)
+            self.current_excel_path = excel_path
+            self.uploaded_file_name = file.filename
+            
+            with io.BytesIO(content) as file_stream:
+                df = pd.read_excel(file_stream)
+                
+                self.excel_columns = df.columns.tolist()
+                self.excel_data = df.to_dict('records')
+                
+                if {"Nombre", "Edad", "Email"}.issubset(df.columns):
+                    with Session(engine) as session:
+                        for _, row in df.iterrows():
+                            data = ExcelData(
+                                nombre=row["Nombre"],
+                                edad=row["Edad"],
+                                email=row["Email"]
+                            )
+                            session.add(data)
+                        session.commit()
+                    
+                    self.load_entries()  
+            
+            self.upload_success = True
+            self.excel_files = get_file_list(EXCEL_DIR)
+            
+        except Exception as e:
+            print(f"Error al procesar el archivo Excel: {e}")
+            self.upload_success = False
+    
+    def view_excel(self, excel_path: str):
+        """Establece el Excel actual para visualización"""
+        self.current_excel_path = excel_path
