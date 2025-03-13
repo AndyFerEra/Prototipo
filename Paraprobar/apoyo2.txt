@@ -1,0 +1,904 @@
+
+-----------------------------------
+
+storage.py
+
+
+import os
+import uuid
+import io
+import shutil
+from pathlib import Path
+import reflex as rx
+
+# Crear directorios para almacenar archivos
+UPLOAD_DIR = Path("assets") / "uploads"
+PDF_DIR = UPLOAD_DIR / "pdfs"
+EXCEL_DIR = UPLOAD_DIR / "excel"
+
+# Asegurar que los directorios existen
+PDF_DIR.mkdir(parents=True, exist_ok=True)
+EXCEL_DIR.mkdir(parents=True, exist_ok=True)
+
+def save_uploaded_pdf(file_content: bytes, original_filename: str) -> str:
+    """Guarda un PDF subido y devuelve la ruta relativa"""
+    # Generar un nombre único para el archivo
+    filename = f"{uuid.uuid4().hex}_{original_filename}"
+    file_path = PDF_DIR / filename
+    
+    # Guardar el archivo
+    with open(file_path, "wb") as f:
+        f.write(file_content)
+    
+    # Devolver ruta relativa para acceso web
+    return f"/uploads/pdfs/{filename}"
+
+def save_uploaded_excel(file_content: bytes, original_filename: str) -> str:
+    """Guarda un Excel subido y devuelve la ruta relativa"""
+    # Generar un nombre único para el archivo
+    filename = f"{uuid.uuid4().hex}_{original_filename}"
+    file_path = EXCEL_DIR / filename
+    
+    # Guardar el archivo
+    with open(file_path, "wb") as f:
+        f.write(file_content)
+    
+    # Devolver ruta relativa para acceso web
+    return f"/uploads/excel/{filename}"
+
+def get_file_list(directory: Path) -> list[dict]:
+    """Obtiene una lista de archivos en el directorio especificado"""
+    files = []
+    if directory.exists():
+        for file in directory.iterdir():
+            if file.is_file():
+                files.append({
+                    "name": file.name,
+                    "path": f"/uploads/{directory.name}/{file.name}",
+                    "size": file.stat().st_size,
+                    "modified": file.stat().st_mtime
+                })
+    return files
+
+-----------------------------------
+
+modificar pdfstate.py
+
+import reflex as rx
+import io
+from PyPDF2 import PdfReader
+from collections import Counter
+import re
+from ..models.excel_data import PdfMetadata
+from ..repository.storage import save_uploaded_pdf, get_file_list, PDF_DIR
+
+class PdfState(rx.State):
+    metadata_list: list[PdfMetadata] = []
+    status: str = ""
+    upload_success: bool = False
+    current_pdf_path: str = ""
+    pdf_files: list[dict] = []
+    
+    def on_load(self):
+        """Cargar la lista de PDFs al inicio"""
+        self.pdf_files = get_file_list(PDF_DIR)
+    
+    async def handle_upload(self, files: list[rx.UploadFile]):
+        """Procesa la subida de PDFs y los guarda para visualización"""
+        if not files:
+            self.status = "No se seleccionó ningún archivo"
+            self.upload_success = False
+            return
+            
+        for file in files:
+            try:
+                content = await file.read()
+                
+                # Guardar el PDF
+                pdf_path = save_uploaded_pdf(content, file.filename)
+                self.current_pdf_path = pdf_path
+                
+                # Extraer metadatos
+                metadata = self.extract_pdf_metadata(content)
+                self.metadata_list.append(PdfMetadata(**metadata))
+                
+                self.status = f"PDF {file.filename} procesado con éxito!"
+                self.upload_success = True
+                
+                # Actualizar lista de PDFs
+                self.pdf_files = get_file_list(PDF_DIR)
+            except Exception as e:
+                self.status = f"Error procesando {file.filename}: {str(e)}"
+                self.upload_success = False
+    
+    def extract_pdf_metadata(self, content: bytes) -> dict:
+        """Extrae metadatos básicos del PDF"""
+        try:
+            pdf = PdfReader(io.BytesIO(content))
+            metadata = pdf.metadata
+            text = " ".join([page.extract_text() or "" for page in pdf.pages])
+            
+            # Extraer palabras clave (palabras más frecuentes)
+            words = re.findall(r'\b\w+\b', text.lower()) 
+            common_words = ["el", "la", "los", "las", "un", "una", "y", "o", "de", "del", "a", "en", "con", "por", "para"]
+            filtered_words = [word for word in words if word not in common_words and len(word) > 3]
+            word_counts = {}
+            for word in filtered_words:
+                if word in word_counts:
+                    word_counts[word] += 1
+                else:
+                    word_counts[word] = 1
+            
+            keywords = []
+            for word, count in sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:5]:
+                keywords.append(word)
+            
+            return {
+                "title": metadata.get("/Title", "Sin título") if metadata else "Sin título",
+                "author": metadata.get("/Author", "Desconocido") if metadata else "Desconocido",
+                "year": metadata.get("/CreationDate", "N/A")[:4] if metadata and metadata.get("/CreationDate") else "N/A",
+                "keywords": keywords,
+            }
+        except Exception as e:
+            print(f"Error al extraer metadatos: {e}")
+            return {
+                "title": "Error al procesar",
+                "author": "Desconocido",
+                "year": "N/A",
+                "keywords": [],
+            }
+    
+    def view_pdf(self, pdf_path: str):
+        """Establece el PDF actual para visualización"""
+        self.current_pdf_path = pdf_path
+
+-----------------------------------
+
+mejorar la clase table_state.py
+
+
+import csv
+import pandas as pd
+import io
+from sqlmodel import Session
+from typing import List, Dict, Any
+import reflex as rx
+
+from ..repository.database import select_all, engine
+from ..models import ExcelData
+from ..repository.storage import save_uploaded_excel, get_file_list, EXCEL_DIR
+
+class TableState(rx.State):
+    """Estado para manejar tablas y archivos Excel."""
+
+    items: List[ExcelData] = []
+    excel_data: List[Dict[str, Any]] = []
+    excel_columns: List[str] = []
+    
+    search_value: str = ""
+    sort_value: str = ""
+    sort_reverse: bool = False
+
+    total_items: int = 0
+    offset: int = 0
+    limit: int = 12  # Número de filas por página
+
+    uploaded_file_name: str = ""
+    upload_success: bool = False
+    current_excel_path: str = ""
+    excel_files: list[dict] = []
+
+    def on_load(self):
+        """Cargar datos al iniciar."""
+        self.load_entries()
+        self.excel_files = get_file_list(EXCEL_DIR)
+
+    @rx.var(cache=True)
+    def filtered_sorted_items(self) -> List[ExcelData]:
+        items = self.items
+
+        # Filtrar elementos basados en el valor de ordenación seleccionado
+        if self.sort_value:
+            items = sorted(
+                items,
+                key=lambda item: str(getattr(item, self.sort_value)).lower(),
+                reverse=self.sort_reverse,
+            )
+
+        # Filtrar elementos basados en el valor de búsqueda
+        if self.search_value:
+            search_value = self.search_value.lower()
+            items = [
+                item
+                for item in items
+                if any(
+                    search_value in str(getattr(item, attr)).lower()
+                    for attr in ["nombre", "edad", "email"]
+                )
+            ]
+
+        return items
+
+    @rx.var(cache=True)
+    def page_number(self) -> int:
+        return (self.offset // self.limit) + 1
+
+    @rx.var(cache=True)
+    def total_pages(self) -> int:
+        return (self.total_items // self.limit) + (
+            1 if self.total_items % self.limit else 0
+        )
+
+    @rx.var(cache=True, initial_value=[])
+    def get_current_page(self) -> list[ExcelData]:
+        start_index = self.offset
+        end_index = start_index + self.limit
+        return self.filtered_sorted_items[start_index:end_index]
+
+    def prev_page(self):
+        if self.page_number > 1:
+            self.offset -= self.limit
+
+    def next_page(self):
+        if self.page_number < self.total_pages:
+            self.offset += self.limit
+
+    def first_page(self):
+        self.offset = 0
+
+    def last_page(self):
+        self.offset = (self.total_pages - 1) * self.limit
+            
+    def load_entries(self):
+        """Cargar entradas de la base de datos."""
+        try:
+            datos_db = select_all()
+            
+            self.items = [
+                ExcelData(
+                    id=item.id,
+                    nombre=item.nombre,
+                    edad=item.edad,
+                    email=item.email,
+                )
+                for item in datos_db
+            ]
+
+            self.total_items = len(self.items)
+            
+        except Exception as e:
+            print(f"Error al cargar los datos de la base de datos: {e}")        
+            
+    def toggle_sort(self):
+        self.sort_reverse = not self.sort_reverse
+        self.load_entries()
+
+    async def handle_upload(self, files: list[rx.UploadFile]):
+        """Maneja la subida de archivos Excel."""
+        if not files:
+            self.upload_success = False
+            return
+            
+        file = files[0]
+        try:
+            content = await file.read()
+            
+            # Guardar el archivo Excel para visualización
+            excel_path = save_uploaded_excel(content, file.filename)
+            self.current_excel_path = excel_path
+            self.uploaded_file_name = file.filename
+            
+            # Leer el contenido del Excel para visualización y procesamiento
+            with io.BytesIO(content) as file_stream:
+                df = pd.read_excel(file_stream)
+                
+                # Guardar los datos para visualización
+                self.excel_columns = df.columns.tolist()
+                self.excel_data = df.to_dict('records')
+                
+                # Si tiene las columnas esperadas, guardar en la base de datos
+                if {"Nombre", "Edad", "Email"}.issubset(df.columns):
+                    with Session(engine) as session:
+                        for _, row in df.iterrows():
+                            data = ExcelData(
+                                nombre=row["Nombre"],
+                                edad=row["Edad"],
+                                email=row["Email"]
+                            )
+                            session.add(data)
+                        session.commit()
+                    
+                    self.load_entries()  # Recargar entradas
+            
+            self.upload_success = True
+            self.excel_files = get_file_list(EXCEL_DIR)
+            
+        except Exception as e:
+            print(f"Error al procesar el archivo Excel: {e}")
+            self.upload_success = False
+    
+    def view_excel(self, excel_path: str):
+        """Establece el Excel actual para visualización"""
+        self.current_excel_path = excel_path
+
+
+-----------------------------------
+
+crear un visor de pdf: pdf_viewer.py
+
+import reflex as rx
+
+def pdf_viewer(pdf_path: str) -> rx.Component:
+    """Componente para visualizar un PDF."""
+    if not pdf_path:
+        return rx.box(
+            rx.text("Seleccione un PDF para visualizar"),
+            padding="2em",
+            text_align="center"
+        )
+    
+    return rx.box(
+        rx.iframe(
+            src=f"/pdfjs/web/viewer.html?file={pdf_path}",
+            width="100%",
+            height="600px",
+            border="none",
+        ),
+        width="100%",
+        border="1px solid #e2e8f0",
+        border_radius="md",
+        overflow="hidden",
+    )
+
+def pdf_file_list(pdf_files: list[dict], on_select=None) -> rx.Component:
+    """Componente para mostrar una lista de PDFs disponibles."""
+    if not pdf_files:
+        return rx.box(
+            rx.text("No hay archivos PDF disponibles"),
+            padding="1em",
+            text_align="center"
+        )
+    
+    return rx.box(
+        rx.heading("PDFs disponibles", size="4"),
+        rx.list(
+            rx.foreach(
+                pdf_files,
+                lambda file: rx.list_item(
+                    rx.button(
+                        file["name"],
+                        on_click=lambda: on_select(file["path"]) if on_select else None,
+                        variant="soft",
+                        width="100%",
+                        justify="start",
+                        padding="0.5em",
+                    )
+                )
+            ),
+            spacing="2",
+            width="100%",
+        ),
+        padding="1em",
+        border="1px solid #e2e8f0",
+        border_radius="md",
+        margin_bottom="1em",
+    )
+
+
+-----------------------------------
+
+componente para visualizar excel: excel_viewer.py
+
+import reflex as rx
+
+def excel_viewer(excel_data: list[dict], columns: list[str]) -> rx.Component:
+    """Componente para visualizar datos de Excel."""
+    if not excel_data or not columns:
+        return rx.box(
+            rx.text("No hay datos de Excel para mostrar"),
+            padding="2em",
+            text_align="center"
+        )
+    
+    return rx.box(
+        rx.data_table(
+            data=excel_data,
+            pagination=True,
+            search=True,
+            sort=True,
+            resizable=True,
+            selection="single",
+        ),
+        width="100%",
+        padding="1em",
+        border="1px solid #e2e8f0",
+        border_radius="md",
+        overflow="auto",
+    )
+
+def excel_file_list(excel_files: list[dict], on_select=None) -> rx.Component:
+    """Componente para mostrar una lista de archivos Excel disponibles."""
+    if not excel_files:
+        return rx.box(
+            rx.text("No hay archivos Excel disponibles"),
+            padding="1em",
+            text_align="center"
+        )
+    
+    return rx.box(
+        rx.heading("Archivos Excel disponibles", size="4"),
+        rx.list(
+            rx.foreach(
+                excel_files,
+                lambda file: rx.list_item(
+                    rx.button(
+                        file["name"],
+                        on_click=lambda: on_select(file["path"]) if on_select else None,
+                        variant="soft",
+                        width="100%",
+                        justify="start",
+                        padding="0.5em",
+                    )
+                )
+            ),
+            spacing="2",
+            width="100%",
+        ),
+        padding="1em",
+        border="1px solid #e2e8f0",
+        border_radius="md",
+        margin_bottom="1em",
+    )
+
+
+-----------------------------------
+
+actualizar la página de subir pdf: subir_pdf.py
+
+import reflex as rx
+from ..backend.pdf_state import PdfState  
+from ..templates import template
+from ..views.pdf_viewer import pdf_viewer, pdf_file_list
+
+@template(route="/subir-pdf", title="Subir PDF", on_load=PdfState.on_load)
+def subir_pdf() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Subir y Visualizar PDFs", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/"),  
+                color_scheme="blue",
+                variant="solid",
+                size="2", 
+            ),
+            spacing="9",  
+            align_items="center",
+            width="100%",
+        ),
+        
+        # Sección de carga
+        rx.card(
+            rx.vstack(
+                rx.upload(
+                    rx.vstack(
+                        rx.icon("file-pdf", size=40, color="blue"),
+                        rx.text("Arrastra y suelta tu PDF aquí o haz clic para seleccionar"),
+                    ),
+                    border="1px dashed #ccc",
+                    padding="2rem",
+                    border_radius="md",
+                    id="pdf_upload",
+                    accept={"application/pdf": [".pdf"]},
+                    max_files=1,
+                ),
+                rx.button(
+                    "Procesar PDF",
+                    on_click=PdfState.handle_upload(rx.upload_files(upload_id="pdf_upload")),
+                    color_scheme="blue",
+                    variant="solid",
+                    margin_top="1em",
+                ),
+                rx.cond(
+                    PdfState.upload_success,
+                    rx.text(PdfState.status, color="green"),
+                    rx.text(PdfState.status, color="red"),
+                ),
+                spacing="2",
+                width="100%",
+                align_items="center",
+                padding="1em",
+            ),
+            width="100%",
+        ),
+        
+        # Visor de PDF y lista de archivos
+        rx.flex(
+            # Lista de PDFs disponibles
+            rx.box(
+                pdf_file_list(PdfState.pdf_files, on_select=PdfState.view_pdf),
+                width="30%",
+                padding="1em",
+            ),
+            
+            # Visor de PDF
+            rx.box(
+                rx.cond(
+                    PdfState.current_pdf_path,
+                    pdf_viewer(PdfState.current_pdf_path),
+                    rx.text("Seleccione un PDF para visualizar", padding="2em", text_align="center"),
+                ),
+                width="70%",
+                padding="1em",
+            ),
+            width="100%",
+            direction=["column", "column", "row"],
+            spacing="4",
+        ),
+        
+        # Botón para ver metadatos
+        rx.cond(
+            PdfState.upload_success,
+            rx.button(
+                "Ver Metadatos",
+                on_click=rx.redirect("/visualizar-metadatos"),
+                color_scheme="green",
+                variant="solid",
+                margin_top="1em",
+            ),
+            rx.text(""),
+        ),
+        
+        spacing="4",
+        width="100%",
+        padding="1em",
+    )
+
+
+-----------------------
+
+crear nueva pagina para visualizar excel: visualizar_excel.py
+
+import reflex as rx
+from ..backend.table_state import TableState
+from ..templates import template
+from ..views.excel_viewer import excel_viewer, excel_file_list
+
+@template(route="/visualizar-excel", title="Visualizar Excel", on_load=TableState.on_load)
+def visualizar_excel() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Visualizar Excel", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/"),
+                color_scheme="blue",
+                variant="solid",
+                size="2",
+            ),
+            spacing="9",
+            align_items="center",
+            width="100%",
+        ),
+        
+        # Lista de archivos y visor
+        rx.flex(
+            # Lista de Excel disponibles
+            rx.box(
+                excel_file_list(TableState.excel_files, on_select=TableState.view_excel),
+                width="30%",
+                padding="1em",
+            ),
+            
+            # Visor de Excel
+            rx.box(
+                rx.cond(
+                    TableState.excel_data,
+                    excel_viewer(TableState.excel_data, TableState.excel_columns),
+                    rx.text("Seleccione un archivo Excel para visualizar", padding="2em", text_align="center"),
+                ),
+                width="70%",
+                padding="1em",
+            ),
+            width="100%",
+            direction=["column", "column", "row"],
+            spacing="4",
+        ),
+        
+        spacing="4", 
+        width="100%",
+        padding="1em",
+    )
+
+
+----------------------------------
+
+actualizar agregar.py
+
+
+import reflex as rx
+from ..backend.table_state import TableState
+from ..templates import template
+from ..views.excel_viewer import excel_viewer
+
+@template(route="/agregar", title="Agregar Datos")
+def agregar() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Subir un nuevo Excel de datos", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/"),  
+                color_scheme="blue",
+                variant="solid",
+                size="2", 
+            ),
+            spacing="9",  
+            align_items="center",
+            width="100%",
+        ),
+        
+        # Sección de carga
+        rx.card(
+            rx.vstack(
+                rx.upload(
+                    rx.vstack(
+                        rx.icon("file-excel", size=40, color="green"),
+                        rx.text("Arrastra y suelta tu archivo Excel aquí o haz clic para seleccionar"),
+                    ),
+                    border="1px dashed #ccc",
+                    padding="2rem",
+                    border_radius="md",
+                    id="excel_upload",
+                    accept={"application/vnd.ms-excel": [".xls", ".xlsx"]},
+                    max_files=1,
+                ),
+                rx.button(
+                    "Procesar Excel",
+                    on_click=TableState.handle_upload(rx.upload_files(upload_id="excel_upload")),
+                    color_scheme="green",
+                    variant="solid",
+                    margin_top="1em",
+                ),
+                rx.cond(
+                    TableState.upload_success,
+                    rx.text(f"Archivo {TableState.uploaded_file_name} cargado correctamente", color="green"),
+                    rx.text(""),
+                ),
+                spacing="2",
+                width="100%",
+                align_items="center",
+                padding="1em",
+            ),
+            width="100%",
+        ),
+        
+        # Vista previa del Excel cargado
+        rx.cond(
+            TableState.excel_data,
+            rx.vstack(
+                rx.heading("Vista previa del Excel", size="4"),
+                excel_viewer(TableState.excel_data, TableState.excel_columns),
+                spacing="4",
+                width="100%",
+            ),
+            rx.text(""),
+        ),
+        
+        # Botón para ver todos los Excel
+        rx.cond(
+            TableState.upload_success,
+            rx.button(
+                "Ver todos los archivos Excel",
+                on_click=rx.redirect("/visualizar-excel"),
+                color_scheme="green",
+                variant="solid",
+                margin_top="1em",
+            ),
+            rx.text(""),
+        ),
+        
+        spacing="4",
+        width="100%",
+        padding="1em",
+    )
+
+
+    --------------------------
+
+    actualizar init.py
+
+
+    from .about import about
+from .dashboard import dashboard
+from .settings import settings
+from .agregar import agregar
+from .subir_pdf import subir_pdf
+from .visualizar_metadatos import visualizar_metadatos
+from .visualizar_excel import visualizar_excel
+
+__all__ = [
+    "about", 
+    "dashboard", 
+    "settings",
+    "agregar", 
+    "subir_pdf", 
+    "visualizar_metadatos",
+    "visualizar_excel"
+]
+
+
+
+-----------------------
+
+
+actualizar dashboard.py
+
+
+"""The dashboard page."""
+
+import reflex as rx
+
+from ..backend.table_state import TableState
+from ..templates import template
+from ..views.table import main_table
+
+
+@template(route="/", title="Dashboard", on_load=TableState.load_entries)
+def dashboard() -> rx.Component:
+    """The dashboard page."""
+    return rx.vstack(
+        rx.heading("Gestor de Documentos", size="5"),
+        
+        # Tarjetas para acciones principales
+        rx.flex(
+            # Tarjeta para Excel
+            rx.card(
+                rx.vstack(
+                    rx.icon("file-excel", size=40, color="green"),
+                    rx.heading("Excel", size="4"),
+                    rx.text("Subir y visualizar archivos Excel"),
+                    rx.flex(
+                        rx.button(
+                            "Subir Excel",
+                            on_click=rx.redirect("/agregar"),
+                            color_scheme="green",
+                            variant="solid",
+                        ),
+                        rx.button(
+                            "Ver Excel",
+                            on_click=rx.redirect("/visualizar-excel"),
+                            color_scheme="gray",
+                            variant="soft",
+                        ),
+                        width="100%",
+                        justify="space-between",
+                    ),
+                    spacing="4",
+                    align_items="center",
+                    padding="1em",
+                ),
+                width="100%",
+            ),
+            
+            # Tarjeta para PDF
+            rx.card(
+                rx.vstack(
+                    rx.icon("file-pdf", size=40, color="blue"),
+                    rx.heading("PDF", size="4"),
+                    rx.text("Subir y visualizar archivos PDF"),
+                    rx.flex(
+                        rx.button(
+                            "Subir PDF",
+                            on_click=rx.redirect("/subir-pdf"),
+                            color_scheme="blue",
+                            variant="solid",
+                        ),
+                        rx.button(
+                            "Ver Metadatos",
+                            on_click=rx.redirect("/visualizar-metadatos"),
+                            color_scheme="gray",
+                            variant="soft",
+                        ),
+                        width="100%",
+                        justify="space-between",
+                    ),
+                    spacing="4",
+                    align_items="center",
+                    padding="1em",
+                ),
+                width="100%",
+            ),
+            
+            spacing="4",
+            width="100%",
+            direction=["column", "column", "row"],
+        ),
+        
+        # Tabla de datos
+        rx.heading("Datos almacenados", size="4", margin_top="1em"),
+        main_table(),
+        
+        spacing="8",
+        width="100%",
+        padding="1em",
+    )
+
+
+-------------------
+
+Instrucciones para Configurar PDF.js
+Para que el visor de PDF funcione correctamente:
+Descargar PDF.js desde https://mozilla.github.io/pdf.js/getting_started/#download
+Extraer el contenido y coloca la carpeta build (renombrada a pdfjs) en el directorio assets/
+tener la estructura de archivos como:
+
+   assets/pdfjs/web/viewer.html
+   assets/pdfjs/web/viewer.js
+   assets/pdfjs/build/...
+
+
+Resumen para readme:
+Prototipo-marcelo/
+├── Paraprobar/
+│   ├── __init__.py
+│   ├── backend/
+│   │   ├── __init__.py
+│   │   ├── pdf_state.py           # NUEVO: Maneja la lógica de PDFs
+│   │   ├── table_state.py         # MODIFICADO: Ahora incluye funcionalidad para Excel
+│   │   └── ...
+│   │
+│   ├── models/
+│   │   ├── __init__.py
+│   │   ├── excel_data.py          # MODIFICADO: Incluye PdfMetadata
+│   │   └── ...
+│   │
+│   ├── pages/
+│   │   ├── __init__.py            # MODIFICADO: Incluye nuevas páginas
+│   │   ├── about.py
+│   │   ├── agregar.py             # MODIFICADO: Mejorada la interfaz
+│   │   ├── dashboard.py           # MODIFICADO: Nueva interfaz con tarjetas
+│   │   ├── settings.py
+│   │   ├── subir_pdf.py           # MODIFICADO: Ahora incluye visualizador
+│   │   ├── visualizar_excel.py    # NUEVO: Visualizador de Excel
+│   │   ├── visualizar_metadatos.py # MODIFICADO: Corregido error rx.range
+│   │   └── ...
+│   │
+│   ├── repository/
+│   │   ├── __init__.py
+│   │   ├── database.py
+│   │   ├── storage.py             # NUEVO: Maneja almacenamiento de archivos
+│   │   └── ...
+│   │
+│   ├── templates/
+│   │   ├── __init__.py
+│   │   ├── template.py
+│   │   └── ...
+│   │
+│   ├── views/
+│   │   ├── __init__.py
+│   │   ├── excel_viewer.py        # NUEVO: Componentes para visualizar Excel
+│   │   ├── pdf_viewer.py          # NUEVO: Componentes para visualizar PDFs
+│   │   ├── table.py
+│   │   └── ...
+│   │
+│   └── ...
+│
+├── assets/
+│   ├── favicon.ico
+│   ├── uploads/                   # NUEVO: Carpeta para archivos subidos
+│   │   ├── pdfs/                  # NUEVO: Almacena PDFs
+│   │   └── excel/                 # NUEVO: Almacena Excel
+│   │
+│   ├── pdfjs/                     # NUEVO: Biblioteca para visualizar PDFs
+│   │   ├── build/
+│   │   ├── web/
+│   │   │   ├── viewer.html
+│   │   │   ├── viewer.js
+│   │   │   └── ...
+│   │   └── ...
+│   └── ...
+│
+├── .gitignore                     # MODIFICADO: Mejorado
+├── requirements.txt               # MODIFICADO: Debe incluir PyPDF2 y pandas
+└── ...
