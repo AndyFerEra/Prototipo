@@ -15,12 +15,7 @@ def visualizar_metadatos() -> rx.Component:
                 rx.cond(
                     metadata.keywords,
                     rx.text(
-                        "Palabras clave: " + 
-                        rx.foreach(
-                            # Iterar sobre índices y palabras clave juntas
-                            rx.range(len(metadata.keywords)),
-                            lambda idx: metadata.keywords[idx] + rx.cond(idx < (len(metadata.keywords) - 1, ", ", ""))
-                        )
+                        "Palabras clave: " + ", ".join(metadata.keywords),
                     ),
                     rx.text("Palabras clave: Ninguna"),
                 ),

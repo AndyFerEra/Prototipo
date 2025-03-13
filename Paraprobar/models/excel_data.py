@@ -17,7 +17,7 @@ class ExcelData(SQLModel, table=True):
     email: str
     
 class PdfMetadata(BaseModel):
-    title: str
-    author: str
-    year: str
-    keywords: list[str]
+    title: str = ""
+    author: str = ""
+    year: str = ""
+    keywords: list[str] = []
