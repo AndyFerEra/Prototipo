@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field
 import reflex as rx
 from typing import Optional
+from pydantic import BaseModel
 
 class User(rx.Model, table=True):
     id: Optional [int] = Field(default=None, primary_key=True)
@@ -14,3 +15,9 @@ class ExcelData(SQLModel, table=True):
     nombre: str
     edad: int
     email: str
+    
+class PdfMetadata(BaseModel):
+    title: str
+    author: str
+    year: str
+    keywords: list[str]

@@ -1,0 +1,86 @@
+────────────────────────────────────────────────────────────────────── Starting Reflex App ───────────────────────────────────────────────────────────────────────Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Scripts\reflex.exe\__main__.py", line 7, in <module>
+    sys.exit(cli())
+             ~~~^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\typer\main.py", line 339, in __call__
+    raise e
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\typer\main.py", line 322, in __call__
+    return get_command(self)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\click\core.py", line 1161, in __call__
+    return self.main(*args, **kwargs)
+           ~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\typer\core.py", line 740, in main
+    return _main(
+        self,
+    ...<6 lines>...
+        **extra,
+    )
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\typer\core.py", line 195, in _main
+    rv = self.invoke(ctx)
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\click\core.py", line 1697, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\click\core.py", line 1443, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\click\core.py", line 788, in invoke
+    return __callback(*args, **kwargs)
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\typer\main.py", line 697, in wrapper
+    return callback(**use_params)
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\reflex.py", line 300, in run
+    _run(env, frontend, backend, frontend_port, backend_port, backend_host, loglevel)
+    ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\reflex.py", line 195, in _run
+    prerequisites.get_compiled_app()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\utils\prerequisites.py", line 387, in get_compiled_app
+    app._compile(export=export)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\app.py", line 1141, in _compile
+    self._compile_page(route, save_page=should_compile)
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\app.py", line 761, in _compile_page
+    component, enable_state = compiler.compile_unevaluated_page(
+                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        route, self._unevaluated_pages[route], self._state, self.style, self.theme
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\compiler\compiler.py", line 611, in compile_unevaluated_page
+    component = into_component(page.component)
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\compiler\compiler.py", line 585, in into_component
+    and (converted := _into_component_once(component())) is not None
+                                           ~~~~~~~~~^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\Paraprobar\templates\template.py", line 129, in theme_wrap
+    templated_page(),
+    ~~~~~~~~~~~~~~^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\Paraprobar\templates\template.py", line 91, in templated_page
+    page_content(),
+    ~~~~~~~~~~~~^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\Paraprobar\pages\visualizar_metadatos.py", line 9, in visualizar_metadatos
+    rx.foreach(
+    ~~~~~~~~~~^
+        PdfState.metadata_list,
+        ^^^^^^^^^^^^^^^^^^^^^^^
+    ...<17 lines>...
+        ),
+        ^^
+    ),
+    ^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\components\core\foreach.py", line 94, in create
+    component.children = [component._render().render_component()]
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\components\tags\iter_tag.py", line 126, in render_component
+    component = self.render_fn(arg)
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\Paraprobar\pages\visualizar_metadatos.py", line 21, in <lambda>
+    rx.range(len(metadata.keywords)),
+    ^^^^^^^^
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\reflex\__init__.py", line 373, in __getattr__
+    return getattr(name)
+  File "C:\Users\MARCELO\Desktop\Prototipo-main\venv\Lib\site-packages\lazy_loader\__init__.py", line 94, in __getattr__
+    raise AttributeError(f"No {package_name} attribute {name}")
+AttributeError: No reflex attribute range. Did you mean: 'badge'?
+[19:52:24] Compiling: ━━━━━━━╸━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━  19%  5/26 0:00:01

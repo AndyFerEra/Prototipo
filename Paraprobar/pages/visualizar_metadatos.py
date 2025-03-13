@@ -5,14 +5,25 @@ from Paraprobar.templates import template
 @template(route="/visualizar-metadatos", title="Metadatos de PDFs")
 def visualizar_metadatos() -> rx.Component:
     return rx.box(
-        rx.heading("Metadatos de PDFs", size="5"),  # Usa 5 (o cualquier valor entre 1 y 9)
+        rx.heading("Metadatos de PDFs", size="5"),
         rx.foreach(
             PdfState.metadata_list,
             lambda metadata: rx.card(
-                rx.text(f"Título: {metadata['title']}"),
-                rx.text(f"Autor: {metadata['author']}"),
-                rx.text(f"Año: {metadata['year']}"),
-                rx.text(f"Palabras clave: {', '.join(metadata['keywords']) if metadata['keywords'] else 'Ninguna'}",),
+                rx.text(f"Título: {metadata.title}"),
+                rx.text(f"Autor: {metadata.author}"),
+                rx.text(f"Año: {metadata.year}"),
+                rx.cond(
+                    metadata.keywords,
+                    rx.text(
+                        "Palabras clave: " + 
+                        rx.foreach(
+                            # Iterar sobre índices y palabras clave juntas
+                            rx.range(len(metadata.keywords)),
+                            lambda idx: metadata.keywords[idx] + rx.cond(idx < (len(metadata.keywords) - 1, ", ", ""))
+                        )
+                    ),
+                    rx.text("Palabras clave: Ninguna"),
+                ),
                 width="100%",
             ),
         ),

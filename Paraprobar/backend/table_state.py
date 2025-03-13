@@ -11,6 +11,8 @@ from PyPDF2 import PdfReader
 from collections import Counter
 import re
 
+from Paraprobar.models.excel_data import PdfMetadata 
+
 import reflex as rx
 
 class Item(rx.Base):
@@ -166,7 +168,7 @@ class TableState(rx.State):
             self.upload_success = False
             
 class PdfState(rx.State):
-    metadata_list: list[dict] = [] 
+    metadata_list: list[PdfMetadata] = []
     status: str = ""
 
     async def handle_upload(self, files: list[rx.UploadFile]):  #
@@ -174,7 +176,7 @@ class PdfState(rx.State):
             try:
                 content = await file.read()
                 metadata = self.extract_pdf_metadata(content)
-                self.metadata_list.append(metadata)
+                self.metadata_list.append(PdfMetadata(**metadata))
                 self.status = f"PDF {file.filename} procesado con éxito!"
             except Exception as e:
                 self.status = f"Error procesando {file.filename}: {str(e)}"
@@ -182,9 +184,9 @@ class PdfState(rx.State):
     def extract_pdf_metadata(self, content: bytes) -> dict:
         pdf = PdfReader(io.BytesIO(content))
         metadata = pdf.metadata
-        text = " ".join([page.extract_text() for page in pdf.pages])
-        words = re.findall(r'\b\w+\b', text.lower()) if text else []
-        keywords = [word for word, count in Counter(words).most_common(5)] if words else []
+        text = " ".join([page.extract_text() or "" for page in pdf.pages])  # Evita None
+        words = re.findall(r'\b\w+\b', text.lower()) 
+        keywords = [word for word, _ in Counter(words).most_common(5)] if words else []
         
         return {
             "title": metadata.get("/Title", "Sin título"),
