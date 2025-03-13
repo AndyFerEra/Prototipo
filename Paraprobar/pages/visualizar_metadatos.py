@@ -1,6 +1,6 @@
 import reflex as rx
-from Paraprobar.backend.table_state import PdfState  
-from Paraprobar.templates import template  
+from ..backend.table_state import PdfState
+from ..templates import template
 
 @template(route="/visualizar-metadatos", title="Metadatos de PDFs")
 def visualizar_metadatos() -> rx.Component:
@@ -13,13 +13,15 @@ def visualizar_metadatos() -> rx.Component:
                 rx.text(f"Autor: {metadata.author}"),
                 rx.text(f"Año: {metadata.year}"),
                 rx.cond(
-                    metadata.keywords,
+                    len(metadata.keywords) > 0,
                     rx.text(
-                        "Palabras clave: " + ", ".join(metadata.keywords),
+                        "Palabras clave: " + 
+                        ", ".join([kw for kw in metadata.keywords])
                     ),
                     rx.text("Palabras clave: Ninguna"),
                 ),
                 width="100%",
+                margin="0.5em",
             ),
         ),
         padding="2rem",

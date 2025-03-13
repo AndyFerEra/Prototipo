@@ -11,7 +11,7 @@ from PyPDF2 import PdfReader
 from collections import Counter
 import re
 
-from Paraprobar.models.excel_data import PdfMetadata 
+from ..models.excel_data import PdfMetadata
 
 import reflex as rx
 
@@ -171,7 +171,7 @@ class PdfState(rx.State):
     metadata_list: list[PdfMetadata] = []
     status: str = ""
 
-    async def handle_upload(self, files: list[rx.UploadFile]):  #
+    async def handle_upload(self, files: list[rx.UploadFile]):
         for file in files:
             try:
                 content = await file.read()
@@ -189,8 +189,8 @@ class PdfState(rx.State):
         keywords = [word for word, _ in Counter(words).most_common(5)] if words else []
         
         return {
-            "title": metadata.get("/Title", "Sin título"),
-            "author": metadata.get("/Author", "Desconocido"),
-            "year": metadata.get("/CreationDate", "N/A")[:4] if metadata.get("/CreationDate") else "N/A",
+            "title": metadata.get("/Title", "Sin título") if metadata else "Sin título",
+            "author": metadata.get("/Author", "Desconocido") if metadata else "Desconocido",
+            "year": metadata.get("/CreationDate", "N/A")[:4] if metadata and metadata.get("/CreationDate") else "N/A",
             "keywords": keywords,
         }
