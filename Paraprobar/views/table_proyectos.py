@@ -63,22 +63,45 @@ def _header_cell(text: str, icon: str) -> rx.Component:
             rx.icon(icon, size=18),
             rx.text(text),
             align="center",
-            spacing="2",
-             min_width="120px",
+            spacing="1",
+            min_width="95px",
         ),
     )
 
-def _show_item(item: Proyectos, index: int) -> rx.Component:
+def _show_item_proyectos(item: Proyectos, index: int) -> rx.Component:
     bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
     hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
 
     return rx.table.row(
-        rx.table.cell(item.id),
-        rx.table.cell(item.nombre),
-        rx.table.cell(item.edad),  
-        rx.table.cell(item.email),
+        rx.table.cell(item.codigo_proyecto),
+        rx.table.cell(item.cliente),
+        rx.table.cell(item.nombre_proyecto),
+        rx.table.cell(item.etapa_ing),
+        rx.table.cell(item.año),
+        rx.table.cell(
+            rx.cond(
+                item.venta_cierre & (item.venta_cierre != None) & (item.venta_cierre != "null"),
+                f"${item.venta_cierre}",
+                ""
+            )
+        ),
+        rx.table.cell(item.cantidad_entregables_cierre),
+        rx.table.cell(
+            rx.cond(
+                item.ratiohh_entrg_cierre & (item.ratiohh_entrg_cierre != None) & (item.ratiohh_entrg_cierre != "null"),
+                round(item.ratiohh_entrg_cierre),
+                ""
+            )
+        ),
+        rx.table.cell(
+            rx.cond(
+                item.ratiocosto_entrg_cierre & (item.ratiocosto_entrg_cierre != None) & (item.ratiocosto_entrg_cierre != "null"),
+                round(item.ratiocosto_entrg_cierre),
+                ""
+            )
+        ),
         style={"_hover": {"bg": hover_color}, "bg": bg_color},
-        align="center",
+        align="center",  
     )
 
 #sin decir pa la paginacion
@@ -144,9 +167,9 @@ def _pagination_view() -> rx.Component:
         ),
     )
 
-def file_upload() -> rx.Component:
+def file_upload_proyectos() -> rx.Component:
     return rx.box(
-        rx.heading("Subir Archivo", size="3", margin_bottom="1rem", color="#2D3748"),
+        rx.heading("Subir Archivo de proyectos", size="3", margin_bottom="1rem", color="#2D3748"),
         rx.upload(
             rx.box(
                 rx.vstack(
@@ -166,7 +189,7 @@ def file_upload() -> rx.Component:
                 _hover={"background_color": "#D1D5DB"},
             ),
             multiple=False,
-            on_drop=TableState.handle_upload,
+            on_drop=TableState.handle_upload_proyectos,
         ),
         rx.cond(
             TableState.upload_success,
@@ -261,7 +284,7 @@ def main_table() -> rx.Component:
                 color_scheme="green",
                 variant="solid",
                 display=["none", "none", "none", "flex"],
-                on_click=rx.redirect("/agregar"),
+                on_click=rx.redirect("/agregarProyectos"),
             ),
             spacing="3",
             justify="between",
@@ -286,9 +309,10 @@ def main_table() -> rx.Component:
             ),
             rx.table.body( 
                 rx.foreach(
-                    TableState.get_current_page,
-                    lambda item, index: _show_item(item, index),
-                )
+                    TableState.get_current_page_proyectos,
+                    lambda item, index: _show_item_proyectos(item, index),
+                ),
+                style={"fontSize": "0.9rem"}
             ),
             variant="surface",
             size="3",

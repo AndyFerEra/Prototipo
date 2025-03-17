@@ -1,6 +1,5 @@
 from sqlmodel import create_engine, Session, select,SQLModel
-
-from ..models.excel_data import ExcelData,Reglas,Proyectos
+from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables
 
 
 DATABASE_URL = "mysql+mysqlconnector://root:@localhost/pro_bisa"
@@ -28,3 +27,10 @@ def select_all_proyectos():
         statement = select(Proyectos)
         results = session.exec(statement)
         return results.all()
+
+def select_all_entregables():
+    with Session(engine) as session:
+        statement = select(Entregables)
+        results = session.exec(statement)
+        return results.all() 
+        

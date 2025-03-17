@@ -6,7 +6,7 @@ from ..templates import template
 from ..views.table_proyectos import main_table
 
 
-@template(route="/proyectos", title="Proyectos",on_load=TableState.load_entries)
+@template(route="/proyectos", title="Proyectos",on_load=TableState.load_entries_proyectos)
 def proyectos() -> rx.Component:
 
     return rx.vstack(
