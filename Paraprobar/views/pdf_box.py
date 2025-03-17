@@ -24,6 +24,7 @@ def file_upload_PDF() -> rx.Component:
                     display = "flex",
                     justify_content = "center",
                     width = "100%",
+                    flex_direction=["column", "row"],
                 ),
             ),
             rx.cond(
@@ -417,7 +418,7 @@ def file_upload_PDF() -> rx.Component:
             ),
         ),
         padding="1rem",
-        width="200%",
+        width="100%",
         max_width="800px",
         border_radius="12px",
         box_shadow="lg",
