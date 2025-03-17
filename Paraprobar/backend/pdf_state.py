@@ -25,43 +25,42 @@ class TableStatePDF(rx.State):
     uploaded_file_path: str = ""
     uploaded_file: str = ""  # Nombre del archivo subido
     file_url: str = ""  # URL del archivo subido
-    
+    is_loading: bool = False  # Variable para controlar el spinner
+    show_summary: bool = False
+    show_alert_entregables: bool = False
+    show_alert_hh: bool = False
+    show_uploader: bool = True
 
     async def handle_upload(self, files: List[rx.UploadFile]):
         """Maneja la subida de archivos y los guarda en la carpeta de uploads."""
         if not files:
             return rx.window_alert("No se seleccionó ningún archivo.")
 
-        # Define la ruta donde se guardará el archivo
+        self.is_loading = True
         upload_dir = os.path.join("Paraprobar", "static", "uploads")
         if not os.path.exists(upload_dir):
             os.makedirs(upload_dir)
 
         for file in files:
             file_path = os.path.join(upload_dir, file.name)
-
-            # Guarda el archivo en el servidor
             with open(file_path, "wb") as f:
                 content = await file.read()
                 f.write(content)
 
-            # Actualiza el estado con el nombre del archivo subido y la URL
             self.uploaded_file = file.name
-            self.file_url = f"/static/uploads/{file.name}"  # Ruta relativa desde static
-            self.uploaded_file_path = file_path  # Guarda la ruta del archivo para procesarlo
+            self.file_url = f"/static/uploads/{file.name}"
+            self.uploaded_file_path = file_path
 
-            # Procesa el PDF automáticamente después de subirlo
-        self.handle_upload_pdf()
+        await self.handle_upload_pdf()
 
-    def handle_upload_pdf(self):
+    async def handle_upload_pdf(self):
         """Procesa el archivo PDF subido y extrae la información."""
         if not self.uploaded_file_path:
-            print("No se subió ningún archivo.")
             self.upload_success = False
+            self.is_loading = False
             return
 
         try:
-            # Procesar el PDF con el modelo YOLO
             result = process_pdf(self.uploaded_file_path, modelo_yolo)
             self.codigo_proyecto = result['Código de proyecto']
             self.disciplina = result['Disciplina']
@@ -70,9 +69,61 @@ class TableStatePDF(rx.State):
             self.codigo_entregable = result['Código de entregable']
             self.extracted_data = True
             self.upload_success = True
+            self.show_uploader = False
         except Exception as e:
             print(f"Error al procesar el PDF: {e}")
             self.upload_success = False
+        finally:
+            self.is_loading = False
+
+    def codigo_existe(self, codigo):
+        """Verifica si el código del entregable ya existe en la base de datos."""
+        with get_session() as session:
+            return session.query(Entregable).filter_by(codigo_entregable=codigo).first() is not None
+
+    def corregir_y_guardar(self):
+        """Valida los datos y ajusta los estados para mostrar mensajes o el resumen."""
+        # Reiniciar estados para evitar conflictos
+        self.show_summary = False
+        self.show_alert_entregables = False
+        self.show_alert_hh = False
+
+        # Validar si el código del entregable ya existe
+        if self.codigo_existe(self.codigo_entregable):
+            self.show_alert_entregables = True
+            print("Error: El código del entregable ya existe.")
+            return
+
+        # Validar el campo Total HH como número válido
+        try:
+            self.total_hh = str(float(self.total_hh))  # Convertir a número válido
+        except ValueError:
+            self.show_alert_hh = True
+            print("Error: El campo Total HH no es válido.")
+            return
+
+        # Si todo está bien, activar el estado para mostrar el resumen
+        self.show_summary = True
+        print("Validaciones completadas. Resumen activado.")
+
+    def guardar_datos(self):
+        """Inserta los datos en la base de datos."""
+        with get_session() as session:
+            entregable = Entregable(
+                nombre_entregable=self.nombre_entregable,
+                codigo_proyecto=self.codigo_proyecto,
+                disciplina=self.disciplina,
+                clasificacion_entregable=self.clasificacion_entregable,
+                tipo_entregable=self.tipo_entregable,
+                codigo_entregable=self.codigo_entregable,
+                total_hh=float(self.total_hh),
+            )
+            session.add(entregable)
+            session.commit()
+
+        return rx.window_alert("Datos guardados exitosamente.")
+
+
 
     def reset_states(self):
         """Restablece los estados al valor inicial."""
@@ -87,32 +138,6 @@ class TableStatePDF(rx.State):
         self.extracted_data = False
         self.uploaded_file = ""
         self.file_url = ""
+        self.is_loading = False  # Restablecer el spinner
+        self.show_uploader = True
         print("Estados restablecidos.")
-
-    def corregir_valores(self):
-        """Corrige los valores extraídos del PDF, convierte total_hh a float e inserta los datos en la base de datos."""
-
-        try:
-            # Convertir total_hh a float
-            Total_h = float(self.total_hh)
-        except ValueError:
-            print(f"Error: el valor de total_hh ('{self.total_hh}') no se pudo convertir a float.")
-            return  # Salir del método si la conversión falla
-
-        datos = {
-            "nombre_entregable": self.nombre_entregable,
-            "codigo_proyecto": self.codigo_proyecto,
-            "disciplina": self.disciplina,
-            "clasificacion_entregable": self.clasificacion_entregable,
-            "tipo_entregable": self.tipo_entregable,
-            "codigo_entregable": self.codigo_entregable,
-            "total_hh": Total_h,
-        }
-        print("Valores corregidos y total_hh convertido a float:", datos)
-
-        # Insertar datos en la base de datos
-        with get_session() as session:
-            entregable = Entregable(**datos)
-            session.add(entregable)
-            session.commit()
-            print("Datos insertados correctamente en la base de datos.")
