@@ -1,5 +1,5 @@
 import reflex as rx
-from ..backend.table_state import PdfState
+from ..backend.pdf_state import PdfState
 from ..templates import template
 
 @template(route="/visualizar-metadatos", title="Metadatos de PDFs")
@@ -12,13 +12,12 @@ def visualizar_metadatos() -> rx.Component:
                 rx.text(f"Título: {metadata.title}"),
                 rx.text(f"Autor: {metadata.author}"),
                 rx.text(f"Año: {metadata.year}"),
-                rx.cond(
-                    len(metadata.keywords) > 0,
-                    rx.text(
-                        "Palabras clave: " + 
-                        ", ".join([kw for kw in metadata.keywords])
+                rx.box(
+                    rx.text("Palabras clave: "),
+                    rx.foreach(
+                        metadata.keywords,
+                        lambda kw: rx.text(f"{kw}, ", inline=True)
                     ),
-                    rx.text("Palabras clave: Ninguna"),
                 ),
                 width="100%",
                 margin="0.5em",

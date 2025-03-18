@@ -4,6 +4,8 @@ from ..backend.table_state import TableState
 from ..templates import template
 from ..views.table import main_table
 
+from reflex.components.core.breakpoints import Breakpoints
+
 
 @template(route="/", title="Dashboard", on_load=TableState.load_entries)
 def dashboard() -> rx.Component:
@@ -14,7 +16,7 @@ def dashboard() -> rx.Component:
         rx.flex(
             rx.card(
                 rx.vstack(
-                    rx.icon("file-excel", size=40, color="green"),
+                    rx.icon("file_archive", size=40, color="green"),
                     rx.heading("Excel", size="4"),
                     rx.text("Subir y visualizar archivos Excel"),
                     rx.flex(
@@ -31,7 +33,7 @@ def dashboard() -> rx.Component:
                             variant="soft",
                         ),
                         width="100%",
-                        justify="space-between",
+                        justify="between",
                     ),
                     spacing="4",
                     align_items="center",
@@ -42,7 +44,7 @@ def dashboard() -> rx.Component:
 
             rx.card(
                 rx.vstack(
-                    rx.icon("file-pdf", size=40, color="blue"),
+                    rx.icon("file_archive", size=40, color="blue"),
                     rx.heading("PDF", size="4"),
                     rx.text("Subir y visualizar archivos PDF"),
                     rx.flex(
@@ -59,7 +61,7 @@ def dashboard() -> rx.Component:
                             variant="soft",
                         ),
                         width="100%",
-                        justify="space-between",
+                        justify="between",
                     ),
                     spacing="4",
                     align_items="center",
@@ -70,7 +72,7 @@ def dashboard() -> rx.Component:
             
             spacing="4",
             width="100%",
-            direction=["column", "column", "row"],
+            direction=Breakpoints(base='column', md='column', lg='row'),
         ),
         
         rx.heading("Datos almacenados", size="4", margin_top="1em"),

@@ -1,12 +1,12 @@
 import reflex as rx
 
 from Paraprobar.models.excel_data import ExcelData
-from ..backend.table_state import Item, TableState
+from ..backend.table_state import ExcelData, TableState
 from ..components.status_badge import status_badge
 
 #trae la informacion de la tabla para poder mostrarlo en diferentes vista
 def _create_dialog(
-    item: Item, icon_name: str, color_scheme: str, dialog_title: str
+    item: ExcelData, icon_name: str, color_scheme: str, dialog_title: str
 ) -> rx.Component:
     return rx.dialog.root(
         rx.dialog.trigger(
@@ -34,19 +34,19 @@ def _create_dialog(
     )
 
 #para los botones falta la logica
-def _delete_dialog(item: Item) -> rx.Component:
+def _delete_dialog(item: ExcelData) -> rx.Component:
     return _create_dialog(item, "trash-2", "tomato", "Delete Dialog")
 
 
-def _approve_dialog(item: Item) -> rx.Component:
+def _approve_dialog(item: ExcelData) -> rx.Component:
     return _create_dialog(item, "check", "grass", "Approve Dialog")
 
 
-def _edit_dialog(item: Item) -> rx.Component:
+def _edit_dialog(item: ExcelData) -> rx.Component:
     return _create_dialog(item, "square-pen", "blue", "Edit Dialog")
 
 #botones agrupados
-def _dialog_group(item: Item) -> rx.Component:
+def _dialog_group(item: ExcelData) -> rx.Component:
     return rx.hstack(
         _approve_dialog(item),
         _edit_dialog(item),

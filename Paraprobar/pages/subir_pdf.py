@@ -3,6 +3,8 @@ from ..backend.pdf_state import PdfState
 from ..templates import template
 from ..views.pdf_viewer import pdf_viewer, pdf_file_list
 
+from reflex.components.core.breakpoints import Breakpoints
+
 @template(route="/subir-pdf", title="Subir PDF", on_load=PdfState.on_load)
 def subir_pdf() -> rx.Component:
     return rx.vstack(
@@ -24,7 +26,7 @@ def subir_pdf() -> rx.Component:
             rx.vstack(
                 rx.upload(
                     rx.vstack(
-                        rx.icon("file-pdf", size=40, color="blue"),
+                        rx.icon("file_archive", size=40, color="blue"),
                         rx.text("Arrastra y suelta tu PDF aquí o haz clic para seleccionar"),
                     ),
                     border="1px dashed #ccc",
@@ -71,7 +73,7 @@ def subir_pdf() -> rx.Component:
                 padding="1em",
             ),
             width="100%",
-            direction=["column", "column", "row"],
+            direction=Breakpoints(base='column', md='column', lg='row'),
             spacing="4",
         ),
         

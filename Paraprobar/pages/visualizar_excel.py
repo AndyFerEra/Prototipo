@@ -3,6 +3,8 @@ from ..backend.table_state import TableState
 from ..templates import template
 from ..views.excel_viewer import excel_viewer, excel_file_list
 
+from reflex.components.core.breakpoints import Breakpoints
+
 @template(route="/visualizar-excel", title="Visualizar Excel", on_load=TableState.on_load)
 def visualizar_excel() -> rx.Component:
     return rx.vstack(
@@ -39,7 +41,7 @@ def visualizar_excel() -> rx.Component:
                 padding="1em",
             ),
             width="100%",
-            direction=["column", "column", "row"],
+            direction=Breakpoints(base='column', md='column', lg='row'),
             spacing="4",
         ),
         

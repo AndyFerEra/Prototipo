@@ -24,7 +24,7 @@ def agregar() -> rx.Component:
             rx.vstack(
                 rx.upload(
                     rx.vstack(
-                        rx.icon("file-excel", size=40, color="green"),
+                        rx.icon("file_archive", size=40, color="green"),
                         rx.text("Arrastra y suelta tu archivo Excel aquí o haz clic para seleccionar"),
                     ),
                     border="1px dashed #ccc",
