@@ -28,7 +28,7 @@ def select_all_proyectos():
         results = session.exec(statement)
         return results.all()
 
-def select_all_entregables():
+def select_all_entregables_2():
     with Session(engine) as session:
         statement = select(Entregables)
         results = session.exec(statement)

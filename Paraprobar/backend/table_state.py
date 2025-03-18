@@ -509,7 +509,7 @@ class TableState(rx.State):
         try:
             start_time = time.time()  # Iniciar cronómetro
 
-            datos_db = select_all_entregables()  # Obtiene los datos desde la base de datos
+            datos_db = select_all_entregables_2()  # Obtiene los datos desde la base de datos
             db_time = time.time()  # Tiempo después de obtener los datos
 
             self.items = [

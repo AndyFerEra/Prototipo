@@ -4,9 +4,7 @@ from ..backend.table_state import TableState
 from ..templates import template
 from ..views.table_reglas import file_upload_reglas
 from ..views.table_proyectos import file_upload_proyectos
-from ..views.table_entregables import file_upload_entregables
-
-
+from ..views.table_entregables_2 import file_upload_entregables
 
 try:
     @template(route="/agregarEntregables", title="Agregar Entregables")
