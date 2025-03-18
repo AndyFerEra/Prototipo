@@ -6,7 +6,6 @@ __pycache__/
 assets/external/
 *__pycache__
 *.pyc
-*/__pycache__
 /__pycache__
 
 Paraprobar/__pycache__/Paraprobar.cpython-312.pyc
