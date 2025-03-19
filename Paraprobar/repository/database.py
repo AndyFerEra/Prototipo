@@ -1,23 +1,14 @@
-from ..models.excel_data import ExcelData
-from sqlmodel import SQLModel, create_engine, Session, select
-from ..models.entregable_model import Entregable
-from dotenv import load_dotenv
-import os
-
-load_dotenv()
-# Leer las variables de entorno
-USER_ENV = os.getenv("USER_ENV")
-PASS_ENV = os.getenv("PASS_ENV")
-DATABASE_ENV = os.getenv("DATABASE_ENV")
+from sqlmodel import create_engine, Session, select,SQLModel
+from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables,Entregable
 
 
 # Construir la URL de conexión a la base de datos
-DATABASE_URL = f"mysql+mysqlconnector://{USER_ENV}:{PASS_ENV}@localhost/{DATABASE_ENV}"
+DATABASE_URL = "mysql+mysqlconnector://root:@localhost/pro_bisa"
 engine = create_engine(DATABASE_URL)
 
 # Crear tablas si no existen
-def init_db():
-    SQLModel.metadata.create_all(engine)
+SQLModel.metadata.create_all(engine)
+
 
 # Crear una sesión para interactuar con la base de datos
 def get_session():
@@ -36,3 +27,23 @@ def select_all():
         statement = select(ExcelData)
         results = session.exec(statement)
         return results.all()
+
+#tabla reglas
+def select_all_reglas():
+    with Session(engine) as session:
+        statement = select(Reglas)
+        results = session.exec(statement)
+        return results.all()
+
+def select_all_proyectos():
+    with Session(engine) as session:
+        statement = select(Proyectos)
+        results = session.exec(statement)
+        return results.all()
+
+def select_all_entregables_2():
+    with Session(engine) as session:
+        statement = select(Entregables)
+        results = session.exec(statement)
+        return results.all() 
+        

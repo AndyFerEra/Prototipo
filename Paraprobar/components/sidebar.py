@@ -28,7 +28,7 @@ def sidebar_item(text: str, url: str) -> rx.Component:
         rx.hstack(
             rx.match(
                 text,
-                ("Dashboard", sidebar_item_icon("layout-dashboard")),
+                ("Entregables", sidebar_item_icon("layers")),
                 ("About", sidebar_item_icon("book-open")),
                 ("Settings", sidebar_item_icon("settings")),
                 sidebar_item_icon("layout-dashboard"),
@@ -84,8 +84,8 @@ def sidebar() -> rx.Component:
     # Las rutas de las páginas ordenadas.
     ordered_page_routes = [
         "/",
-        "/about",
-        "/settings",
+        "/proyectos",
+        "/reglas",
     ]
     # Obtener las páginas decoradas.
     pages = get_decorated_pages()

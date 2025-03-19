@@ -1,8 +1,9 @@
-from .about import about
-from .dashboard import dashboard
+from .proyectos import proyectos
+from .entregables import entregables_2
 from .settings import settings
-from .agregar import agregar
+from .agregar import agregar,agregarReglas,agregarProyectos,agregarEntregables
+from .reglas import reglas
 from .agregar_pdf import agregar_pdf
 from .entregables import entregables
 
-__all__ = ["about", "dashboard", "settings","agregar", "agregar_pdf", "entregables"]
+__all__ = ["proyectos", "entregables_2", "settings","reglas","agregarReglas","agregarProyectos","agregarEntregables", "agregar_pdf", "entregables"]
