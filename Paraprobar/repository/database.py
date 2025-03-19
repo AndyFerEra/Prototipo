@@ -1,16 +1,15 @@
 from sqlmodel import create_engine, Session, select,SQLModel
-from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables,Entregable
+from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables
+from ..models.entregable_model import Entregable
 
 
 # Construir la URL de conexión a la base de datos
 DATABASE_URL = "mysql+mysqlconnector://root:@localhost/pro_bisa"
 engine = create_engine(DATABASE_URL)
 
-# Crear tablas si no existen
-SQLModel.metadata.create_all(engine)
+def init_db():
+    SQLModel.metadata.create_all(engine)
 
-
-# Crear una sesión para interactuar con la base de datos
 def get_session():
     return Session(engine)
 

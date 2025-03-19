@@ -5,7 +5,8 @@ import pandas as pd
 import io
 from sqlmodel import Session
 from ..repository.database import * 
-from ..models import ExcelData,Reglas,Proyectos,Entregables	
+from ..models import ExcelData,Reglas,Proyectos,Entregables
+from ..models.entregable_model import Entregable
 import time
 import reflex as rx
 
@@ -257,7 +258,7 @@ class TableState(rx.State):
         self.sort_reverse = not self.sort_reverse
         self.load_entries()
 
-    """ def handle_upload(self, files: list):
+    def handle_upload(self, files: list):
         # Maneja la subida de archivos.
         if not files:
             print("No se subió ningún archivo.")
@@ -293,7 +294,7 @@ class TableState(rx.State):
         except Exception as e:
             print("Error al procesar el archivo:", e)
             self.upload_success = False
-            """
+           
  #=======================================================================================================            
             
  #cargar datos de bd de reglas

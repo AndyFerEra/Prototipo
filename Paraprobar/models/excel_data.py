@@ -72,5 +72,3 @@ class Entregables(SQLModel, table=True):
     total_hh: Optional[int] = None
     enlace_pdf: str
     enlace_nativo: str
-
-

@@ -1,9 +1,8 @@
 import reflex as rx
 
-from Paraprobar.models.excel_data import Entregables
+from Paraprobar.models.excel_data import ExcelData
 from ..backend.table_state import Item, TableState
 from ..components.status_badge import status_badge
-import time
 
 #trae la informacion de la tabla para poder mostrarlo en diferentes vista
 def _create_dialog(
@@ -68,21 +67,15 @@ def _header_cell(text: str, icon: str) -> rx.Component:
         ),
     )
 
-def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
+def _show_item(item: ExcelData, index: int) -> rx.Component:
     bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
     hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
 
     return rx.table.row(
         rx.table.cell(item.id),
-        rx.table.cell(item.codigo_proyecto_entregables),
-        rx.table.cell(item.disciplina_entregables),
-        rx.table.cell(item.clasificacion_entregable),
-        rx.table.cell(item.tipo_entregable_entre),
-        rx.table.cell(item.codigo_entregable),
-        rx.table.cell(item.nombre_entregable),
-        rx.table.cell(item.total_hh if item.total_hh is not None else ""),
-        rx.table.cell(item.enlace_pdf),
-        rx.table.cell(item.enlace_nativo),
+        rx.table.cell(item.nombre),
+        rx.table.cell(item.edad),  # Convertimos edad a string
+        rx.table.cell(item.email),
         style={"_hover": {"bg": hover_color}, "bg": bg_color},
         align="center",
     )
@@ -150,58 +143,46 @@ def _pagination_view() -> rx.Component:
         ),
     )
 
-def file_upload_entregables() -> rx.Component:
-    try:
-        return rx.box(
-            rx.heading("Subir Archivo los entregables", size="3", margin_bottom="1rem", color="#2D3748"),
-            rx.upload(
-                rx.box(
-                    rx.vstack(
-                        rx.icon("file-up", size=48, color="#2563EB"),  # Nuevo ícono
-                        rx.text("Arrastra y suelta tu archivo aquí", font_size="1.2rem", font_weight="bold", color="#1F2937"),
-                        rx.text("o haz clic para seleccionar un archivo", font_size="0.9rem", color="#4B5563"),
-                    ),
-                    max_size=100_000_000,
-                    accept={
-                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-                            "application/vnd.ms-excel": [".xls"]
-                    },
-                    padding="1rem",  # Reducir el padding
-                    border="2px dashed #2563EB",
-                    border_radius="12px",
-                    height="200px",  # Reducir la altura
-                    width="100%",
-                    display="flex",
-                    align_items="center",
-                    justify_content="center",
-                    background_color="#E5E7EB",  # Fondo gris claro para mejorar contraste
-                    _hover={"background_color": "#D1D5DB"},
+def file_upload() -> rx.Component:
+    return rx.box(
+        rx.heading("Subir Archivo", size="3", margin_bottom="1rem", color="#2D3748"),
+        rx.upload(
+            rx.box(
+                rx.vstack(
+                    rx.icon("file-up", size=48, color="#2563EB"),  # Nuevo ícono
+                    rx.text("Arrastra y suelta tu archivo aquí", font_size="1.2rem", font_weight="bold", color="#1F2937"),
+                    rx.text("o haz clic para seleccionar un archivo", font_size="0.9rem", color="#4B5563"),
                 ),
-                
-                multiple=False,
-                on_drop=TableState.handle_upload_entregables,
-                max_size=100_000_000,
-                
-
+                padding="1rem",  # Reducir el padding
+                border="2px dashed #2563EB",
+                border_radius="12px",
+                height="200px",  # Reducir la altura
+                width="100%",
+                display="flex",
+                align_items="center",
+                justify_content="center",
+                background_color="#E5E7EB",  # Fondo gris claro para mejorar contraste
+                _hover={"background_color": "#D1D5DB"},
             ),
-            rx.cond(
-                TableState.upload_success,
-                rx.text("Archivo subido y procesado correctamente.", color="green", margin_top="1rem"),
-                rx.text("Esperando archivo....", color="#374151", margin_top="1rem"),  # Texto oscuro para contraste
-                
-            ),
-            padding="1rem",  # Reducir el padding
-            width="100%",
-            max_width="400px",  # Reducir el ancho máximo
-            border_radius="12px",
-            box_shadow="lg",
-            background_color="#F3F4F6",  # Fondo gris suave
-            margin="auto",
-        )
-    except Exception as e:
-        print(f"An error occurred: {e}")
+            multiple=False,
+            on_drop=TableState.handle_upload,
+        ),
+        rx.cond(
+            TableState.upload_success,
+            rx.text("Archivo subido y procesado correctamente.", color="green", margin_top="1rem"),
+            rx.text("Esperando archivo...", color="#374151", margin_top="1rem"),  # Texto oscuro para contraste
+        ),
+        padding="1rem",  # Reducir el padding
+        width="100%",
+        max_width="400px",  # Reducir el ancho máximo
+        border_radius="12px",
+        box_shadow="lg",
+        background_color="#F3F4F6",  # Fondo gris suave
+        margin="auto",
+    )
+    
 
-def main_table_2() -> rx.Component:
+def main_table() -> rx.Component:
     return rx.box(
         #ordenar mayor menor y busqueda y boton de descarga
         rx.flex(
@@ -279,7 +260,7 @@ def main_table_2() -> rx.Component:
                 color_scheme="green",
                 variant="solid",
                 display=["none", "none", "none", "flex"],
-                on_click=rx.redirect("/agregarEntregables"),
+                on_click=rx.redirect("/agregar"),
             ),
             spacing="3",
             justify="between",
@@ -291,23 +272,19 @@ def main_table_2() -> rx.Component:
             rx.table.header(
                 #iconos y nombre del encabezado de tabla
                 rx.table.row(
-                    _header_cell("ID", "hash"),
-                    _header_cell("Codigo Pry", "folder-git"),
-                    _header_cell("Disciplina", "list-collapse"),
-                    _header_cell("Tipo Entrgbl", "square-stack"),
-                    _header_cell("Codigo Entrgbl", "folder-code"),
-                    _header_cell("Nombre Entrgbl", "folder-pen"),
-                    _header_cell("HH Venta", "hourglass"),
-                    _header_cell("PDF", "file-text"),
-                    _header_cell("Editable", "pencil-line"),
+                    _header_cell("Pipeline", "route"),
+                    _header_cell("Workflow", "list-checks"),
+                    _header_cell("Status", "notebook-pen"),
+                    _header_cell("Timestamp", "calendar"),
+                    _header_cell("Duration", "clock"),
+                    _header_cell("Action", "cog"),
                 ),
             ),
             rx.table.body( 
                 rx.foreach(
-                    TableState.get_current_page_entregables,
-                    lambda item, index: _show_item_entregables(item, index),
-                ),
-                style={"fontSize": "0.9rem"}
+                    TableState.get_current_page,
+                    lambda item, index: _show_item(item, index),
+                )
             ),
             variant="surface",
             size="3",

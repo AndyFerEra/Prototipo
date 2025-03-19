@@ -108,6 +108,8 @@ def menu_button() -> rx.Component:
         "/",
         "/proyectos",
         "/reglas",
+        "/entregables",
+        "/agregar_pdf",
     ]
 
     pages = get_decorated_pages()

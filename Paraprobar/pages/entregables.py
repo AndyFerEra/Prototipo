@@ -2,7 +2,7 @@ import reflex as rx
 from ..backend.table_entregables_state import TableEntregablesState
 from ..templates import template
 from ..views.table_entregables import main_table
-from ..views.table_entregables_2 import main_table
+from ..views.table_entregables_2 import main_table_2
 from ..backend.table_state import TableState
 
 @template(route="/entregables", title="Entregables", on_load=TableEntregablesState.load_entries)
@@ -19,7 +19,7 @@ def entregables_2() -> rx.Component:
 
     return rx.vstack(
         rx.heading("Listado de Entregables", size="7",align="center"),
-        main_table(),
+        main_table_2(),
         spacing="8",
         width="100%",
     )
