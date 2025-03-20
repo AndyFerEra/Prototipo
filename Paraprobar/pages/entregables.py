@@ -5,7 +5,7 @@ from ..views.table_entregables import main_table
 from ..views.table_entregables_2 import main_table_2
 from ..backend.table_state import TableState
 
-@template(route="/entregables", title="Entregables", on_load=TableEntregablesState.load_entries)
+@template(route="/entregables", title="Entregables_River", on_load=TableEntregablesState.load_entries)
 def entregables() -> rx.Component:
     return rx.vstack(
         rx.heading("Tabla de Entregables", size="5"),
