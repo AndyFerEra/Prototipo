@@ -101,26 +101,7 @@ def sidebar() -> rx.Component:
     )
 
     return rx.flex(
-        rx.vstack(
-            
-            rx.vstack(
-                *[
-                    sidebar_item(
-                        text=page.get("title", page["route"].strip("/").capitalize()),
-                        url=page["route"],
-                    )
-                    for page in ordered_pages
-                ],
-                spacing="1",
-                width="100%",
-            ),
-            rx.spacer(),
-            justify="end",
-            align="end",
-            width=styles.sidebar_content_width,
-            height="100dvh",
-            padding="1em",
-        ),
+        
         display=["none", "none", "none", "none", "none", "flex"],
         max_width=styles.sidebar_width,
         width="auto",

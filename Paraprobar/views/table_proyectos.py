@@ -221,7 +221,7 @@ def main_table() -> rx.Component:
                         stroke_width=1.5,
                         cursor="pointer",
                         flex_shrink="0",
-                        on_click=TableState.toggle_sort,
+                        on_click=TableState.toggle_sort_proyectos,
                     ),
                     rx.icon(
                         "arrow-down-a-z",
@@ -229,7 +229,7 @@ def main_table() -> rx.Component:
                         stroke_width=1.5,
                         cursor="pointer",
                         flex_shrink="0",
-                        on_click=TableState.toggle_sort,
+                        on_click=TableState.toggle_sort_proyectos,
                     ),
                 ),
                 #combo box para ordenar la tabla
