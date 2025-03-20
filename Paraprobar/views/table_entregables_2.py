@@ -216,7 +216,7 @@ def main_table_2() -> rx.Component:
                         stroke_width=1.5,
                         cursor="pointer",
                         flex_shrink="0",
-                        on_click=TableState.toggle_sort,
+                        on_click=TableState.toggle_sort_entregables,
                     ),
                     rx.icon(
                         "arrow-down-a-z",
@@ -224,7 +224,7 @@ def main_table_2() -> rx.Component:
                         stroke_width=1.5,
                         cursor="pointer",
                         flex_shrink="0",
-                        on_click=TableState.toggle_sort,
+                        on_click=TableState.toggle_sort_entregables,
                     ),
                 ),
                 #combo box para ordenar la tabla
