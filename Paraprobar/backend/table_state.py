@@ -22,6 +22,7 @@ class Item(rx.Base):
 class TableState(rx.State):
     """La clase State."""
 
+    loading_progress: int = 0
     items: List[ExcelData] = []
     
     search_value: str = ""
@@ -319,6 +320,8 @@ class TableState(rx.State):
                 )
                 for item in datos_db
             ]
+            
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
 
             self.total_items = len(self.items)
             print(f"Se cargaron {self.total_items} datos de reglas.")
@@ -422,7 +425,7 @@ class TableState(rx.State):
                 )
                 for item in datos_db
             ]
-
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
             self.total_items = len(self.items)
             print(f"Se cargaron {self.total_items} registros desde la base de datos de proyectos.")
 
@@ -507,11 +510,21 @@ class TableState(rx.State):
             
 #cargar datos de bd de entregables
     def load_entries_entregables(self):
+        """Carga los datos y actualiza la barra de progreso dinámicamente."""
         try:
-            start_time = time.time()  # Iniciar cronómetro
+            self.loading_progress = 10  # Inicia la barra de carga
+            yield  # 🔄 Actualiza la interfaz
 
-            datos_db = select_all_entregables_2()  # Obtiene los datos desde la base de datos
-            db_time = time.time()  # Tiempo después de obtener los datos
+            start_time = time.time()
+
+            datos_db = select_all_entregables_2()  # Cargar datos de la BD
+            db_time = time.time()
+            self.loading_progress = 50  # A mitad del proceso
+            yield  # 🔄 Actualiza la interfaz
+
+            # Procesar datos
+            self.loading_progress = 65  # Procesando datos
+            yield  
 
             self.items = [
                 Entregables(
@@ -528,78 +541,44 @@ class TableState(rx.State):
                 )
                 for item in datos_db
             ]
+            
+            self.loading_progress = 80  # Datos casi listos
+            yield  
 
-            process_time = time.time()  # Tiempo después de procesar los datos
-
+            process_time = time.time()
             self.total_items = len(self.items)
-            print(f"✅ Se cargaron {self.total_items} datos de entregables.")
-            print(f"⏱ Tiempo de consulta a BD/Caché: {db_time - start_time:.4f} s")
-            print(f"⏳ Tiempo de procesamiento de datos: {process_time - db_time:.4f} s")
-            print(f"🚀 Tiempo total: {process_time - start_time:.4f} s")
 
+            self.loading_progress = 90  # Preparando para mostrar
+            yield  
+
+            print(f"✅ Se cargaron {self.total_items} datos de entregables.")
+            print(f"⏱ BD/Caché: {db_time - start_time:.4f} s")
+            print(f"⏳ Procesamiento: {process_time - db_time:.4f} s")
+            print(f"🚀 Total: {process_time - start_time:.4f} s")
+
+            # Simulación de espera para UX
+            time.sleep(0.5)
+
+            self.loading_progress = 90  # Carga completada
+            yield  
+
+            time.sleep(5)
+            self.loading_progress = 0  # Ocultar barra
+            yield  
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
         except Exception as e:
-            print(f"Error al cargar los datos de la base de datos: {e}")    
+            print(f"❌ Error al cargar los datos de la base de datos: {e}")
+            self.loading_progress = 0  # Reset en caso de error
+            yield  # 🔄 Asegura que se oculta la barra    
+
+    def start_loading(self):
+            """Inicia la barra de carga antes de que la vista cargue los datos."""
+            self.loading_progress = 1
+            yield
 
     def toggle_sort_entregables(self):
         self.sort_reverse = not self.sort_reverse
         self.load_entries_entregables()
-
-    """ def handle_upload_entregables(self, files: list):
-        #Maneja la subida de archivos.
-        print("handle_upload_entregables ha sido llamado")
-        if not files:
-            print("No se subió ningún archivo.")
-            self.upload_success = False
-            return  # Salir de la función si no hay archivos
-
-        file_data = files[0]  # Accedemos a los datos binarios del archivo
-        self.uploaded_file_name = "archivo_subido.xlsx"  # Nombre genérico para el archivo
-
-        try:
-            with io.BytesIO(file_data) as file_stream:
-                df = pd.read_excel(file_stream)
-                # Eliminar espacios adicionales en los nombres de las columnas
-                df.columns = df.columns.str.strip()
-                df = df.fillna("")  # Rellenar valores nulos con cadena vacía
-                # Validar que las columnas esperadas existen en el archivo
-                required_columns = {"ID", "Código de proyecto", "Disciplina", "Clasificación de entregable", "Tipo de entregable", 
-                                    "Código de entregable", "Nombre de entregable", "Total HH", "Enlace al entregable (PDF)", 
-                                    "Enlace al entregable (Nativo)"}
-                if not required_columns.issubset(df.columns):
-                    print("Error: El archivo no tiene las columnas esperadas para los entregables.")
-                    self.upload_success = False
-                    return
-                missing_columns = required_columns - set(df.columns)
-                if missing_columns:
-                    print(f"Error: El archivo no tiene las columnas esperadas para los entregables. Faltan las columnas: {', '.join(missing_columns)}")
-                    self.upload_success = False
-                    return
-                
-                start_time = time.time()
-                # Guardar los datos en la base de datos
-                with Session(engine) as session:
-                    for _, row in df.iterrows():
-                        data = Entregables(
-                            codigo_proyecto_entregables=row["Código de proyecto"],
-                            disciplina_entregables=row["Disciplina"],
-                            clasificacion_entregable=row["Clasificación de entregable"],
-                            tipo_entregable_entre=row["Tipo de entregable"],
-                            codigo_entregable=row["Código de entregable"],
-                            nombre_entregable=row["Nombre de entregable"],
-                            total_hh=row["Total HH"],
-                            enlace_pdf=row["Enlace al entregable (PDF)"],
-                            enlace_nativo=row["Enlace al entregable (Nativo)"],
-                        )
-                        session.add(data)
-                    session.commit()
-
-                end_time = time.time()
-                print(f"Tiempo total de inserción: {end_time - start_time:.2f} segundos")
-                self.upload_success = True
-                print("Datos guardados en la base de datos para entregables.")
-        except Exception as e:
-            print("Error al procesar el archivo:", e)
-            self.upload_success = False  """
 
     def handle_upload_entregables(self, files: list):
         try:
