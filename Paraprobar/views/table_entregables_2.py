@@ -209,7 +209,7 @@ def main_table_2() -> rx.Component:
             rx.flex(
                 #condicional para cambiar el orden de los iconos de ordenar la tabla 
                 rx.cond(
-                    TableState.sort_reverse,
+                    TableState.sort_reverse_entregables,
                     rx.icon(
                         "arrow-down-z-a",
                         size=28,

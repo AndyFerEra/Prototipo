@@ -28,6 +28,9 @@ class TableState(rx.State):
     search_value: str = ""
     sort_value: str = ""
     sort_reverse: bool = False
+    sort_reverse_reglas: bool = False
+    sort_reverse_proyectos: bool = False
+    sort_reverse_entregables: bool = False
 
     total_items: int = 0
     offset: int = 0
@@ -321,7 +324,7 @@ class TableState(rx.State):
                 for item in datos_db
             ]
             
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_reglas)
 
             self.total_items = len(self.items)
             print(f"Se cargaron {self.total_items} datos de reglas.")
@@ -330,7 +333,7 @@ class TableState(rx.State):
             print(f"Error al cargar los datos de la base de datos: {e}")     
 
     def toggle_sort_reglas(self):
-        self.sort_reverse = not self.sort_reverse
+        self.sort_reverse_reglas = not self.sort_reverse_reglas
         self.load_entries_reglas()
 
     def handle_upload_reglas(self, files: list):
@@ -425,7 +428,7 @@ class TableState(rx.State):
                 )
                 for item in datos_db
             ]
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_proyectos)
             self.total_items = len(self.items)
             print(f"Se cargaron {self.total_items} registros desde la base de datos de proyectos.")
 
@@ -433,7 +436,7 @@ class TableState(rx.State):
             print(f"Error al cargar los datos de la base de datos: {e}")     
 
     def toggle_sort_proyectos(self):
-        self.sort_reverse = not self.sort_reverse
+        self.sort_reverse_proyectos = not self.sort_reverse_proyectos
         self.load_entries_proyectos()
 
     def handle_upload_proyectos(self, files: list):
@@ -565,7 +568,7 @@ class TableState(rx.State):
             time.sleep(5)
             self.loading_progress = 0  # Ocultar barra
             yield  
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_entregables)
         except Exception as e:
             print(f"❌ Error al cargar los datos de la base de datos: {e}")
             self.loading_progress = 0  # Reset en caso de error
@@ -577,7 +580,7 @@ class TableState(rx.State):
             yield
 
     def toggle_sort_entregables(self):
-        self.sort_reverse = not self.sort_reverse
+        self.sort_reverse_entregables = not self.sort_reverse_entregables
         self.load_entries_entregables()
 
     def handle_upload_entregables(self, files: list):
