@@ -24,10 +24,21 @@ class TableState(rx.State):
 
     loading_progress: int = 0
     items: List[ExcelData] = []
-    
+        
     search_value: str = ""
+    search_value_reglas: str = ""
+    search_value_proyectos: str = ""
+    search_value_entregables: str = ""
+    
     sort_value: str = ""
+    sort_value_reglas: str = ""
+    sort_value_proyectos: str = ""
+    sort_value_entregables: str = ""
+    
     sort_reverse: bool = False
+    sort_reverse_reglas: bool = False
+    sort_reverse_proyectos: bool = False
+    sort_reverse_entregables: bool = False
 
     total_items: int = 0
     offset: int = 0
@@ -81,31 +92,30 @@ class TableState(rx.State):
     #Para las busquedas y ordenamiento para arreglar
     @rx.var(cache=True)
     def filtered_sorted_items_reglas(self) -> List[Reglas]:
-        
-        items = self.items 
+        items = self.items  
 
-        # Filtrar elementos basados en el valor de ordenación seleccionado
-        if self.sort_value:
+        # Ordenar si hay un criterio seleccionado
+        if self.sort_value_reglas:
             items = sorted(
                 items,
-                key=lambda item: str(getattr(item, self.sort_value)).lower(),
-                reverse=self.sort_reverse,
+                key=lambda item: str(getattr(item, self.sort_value_reglas)).lower(),
+                reverse=self.sort_reverse_reglas,
             )
 
-        # Filtrar elementos basados en el valor de búsqueda
-        if self.search_value:
-            search_value = self.search_value.lower()
+        # Filtrar si hay un valor de búsqueda
+        if self.search_value_reglas:
+            search_value = self.search_value_reglas.lower()
             items = [
                 item
                 for item in items
                 if any(
                     search_value in str(getattr(item, attr)).lower()
                     for attr in [
-                        "Cod Disc",
-                        "Disciplina",
-                        "Sector",
-                        "Etp Ing",
-                        "Estado",
+                        "codigo_disciplina",  # Cod Disc
+                        "disciplina", # Disciplina 
+                        "sector", #Sector
+                        "etapa_ingenieria",  # ETp Ing
+                        "estado", #Estado
                     ]
                 )
             ]
@@ -119,27 +129,27 @@ class TableState(rx.State):
         items = self.items 
 
         # Filtrar elementos basados en el valor de ordenación seleccionado
-        if self.sort_value:
+        if self.sort_value_proyectos:
             items = sorted(
                 items,
-                key=lambda item: str(getattr(item, self.sort_value)).lower(),
-                reverse=self.sort_reverse,
+                key=lambda item: str(getattr(item, self.sort_value_proyectos)).lower(),
+                reverse=self.sort_reverse_proyectos,
             )
 
         # Filtrar elementos basados en el valor de búsqueda
-        if self.search_value:
-            search_value = self.search_value.lower()
+        if self.search_value_proyectos:
+            search_value = self.search_value_proyectos.lower()
             items = [
                 item
                 for item in items
                 if any(
                     search_value in str(getattr(item, attr)).lower()
                     for attr in [
-                        "Cod Disc",
-                        "Disciplina",
-                        "Sector",
-                        "Etp Ing",
-                        "Estado",
+                        "codigo_proyecto", #Codigo Pry
+                        "cliente", #Cliente
+                        "año", #Año
+                        "nombre_proyecto", #Nombre Pry
+                        "etapa_ing", #Etp Ing
                     ]
                 )
             ]
@@ -152,27 +162,27 @@ class TableState(rx.State):
         items = self.items 
 
         # Filtrar elementos basados en el valor de ordenación seleccionado
-        if self.sort_value:
+        if self.sort_value_entregables:
             items = sorted(
                 items,
-                key=lambda item: str(getattr(item, self.sort_value)).lower(),
-                reverse=self.sort_reverse,
+                key=lambda item: str(getattr(item, self.sort_value_entregables)).lower(),
+                reverse=self.sort_reverse_entregables,
             )
 
         # Filtrar elementos basados en el valor de búsqueda
-        if self.search_value:
-            search_value = self.search_value.lower()
+        if self.search_value_entregables:
+            search_value = self.search_value_entregables.lower()
             items = [
                 item
                 for item in items
                 if any(
                     search_value in str(getattr(item, attr)).lower()
                     for attr in [
-                        "Cod Disc",
-                        "Disciplina",
-                        "Sector",
-                        "Etp Ing",
-                        "Estado",
+                        "nombre_entregable", #Nombre Entrgbl
+                        "codigo_entregable", #Codigo Entrgbl
+                        "codigo_proyecto_entregables",#Codigo Pry
+                        "disciplina_entregables", #Disciplina
+                        "tipo_entregable_entre", #Tipo Entrgbl
                     ]
                 )
             ]
@@ -321,7 +331,7 @@ class TableState(rx.State):
                 for item in datos_db
             ]
             
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_reglas)
 
             self.total_items = len(self.items)
             print(f"Se cargaron {self.total_items} datos de reglas.")
@@ -330,7 +340,7 @@ class TableState(rx.State):
             print(f"Error al cargar los datos de la base de datos: {e}")     
 
     def toggle_sort_reglas(self):
-        self.sort_reverse = not self.sort_reverse
+        self.sort_reverse_reglas = not self.sort_reverse_reglas
         self.load_entries_reglas()
 
     def handle_upload_reglas(self, files: list):
@@ -425,7 +435,7 @@ class TableState(rx.State):
                 )
                 for item in datos_db
             ]
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_proyectos)
             self.total_items = len(self.items)
             print(f"Se cargaron {self.total_items} registros desde la base de datos de proyectos.")
 
@@ -433,7 +443,7 @@ class TableState(rx.State):
             print(f"Error al cargar los datos de la base de datos: {e}")     
 
     def toggle_sort_proyectos(self):
-        self.sort_reverse = not self.sort_reverse
+        self.sort_reverse_proyectos = not self.sort_reverse_proyectos
         self.load_entries_proyectos()
 
     def handle_upload_proyectos(self, files: list):
@@ -565,7 +575,7 @@ class TableState(rx.State):
             time.sleep(5)
             self.loading_progress = 0  # Ocultar barra
             yield  
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse)
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_entregables)
         except Exception as e:
             print(f"❌ Error al cargar los datos de la base de datos: {e}")
             self.loading_progress = 0  # Reset en caso de error
@@ -577,7 +587,7 @@ class TableState(rx.State):
             yield
 
     def toggle_sort_entregables(self):
-        self.sort_reverse = not self.sort_reverse
+        self.sort_reverse_entregables = not self.sort_reverse_entregables
         self.load_entries_entregables()
 
     def handle_upload_entregables(self, files: list):

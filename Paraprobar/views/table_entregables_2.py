@@ -76,7 +76,6 @@ def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
         rx.table.cell(item.id),
         rx.table.cell(item.codigo_proyecto_entregables),
         rx.table.cell(item.disciplina_entregables),
-        rx.table.cell(item.clasificacion_entregable),
         rx.table.cell(item.tipo_entregable_entre),
         rx.table.cell(item.codigo_entregable),
         rx.table.cell(item.nombre_entregable),
@@ -209,7 +208,7 @@ def main_table_2() -> rx.Component:
             rx.flex(
                 #condicional para cambiar el orden de los iconos de ordenar la tabla 
                 rx.cond(
-                    TableState.sort_reverse,
+                    TableState.sort_reverse_entregables,
                     rx.icon(
                         "arrow-down-z-a",
                         size=28,
@@ -238,26 +237,28 @@ def main_table_2() -> rx.Component:
                     ],
                     placeholder="Sort By: Pipeline",
                     size="3",
+                    cursor="pointer",
                     on_change=TableState.set_sort_value,
                 ),
                 #todo pa buscar
                 rx.input(
                     rx.input.slot(rx.icon("search")),
                     rx.input.slot(
-                        rx.icon("x"),
+                        rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=TableState.setvar("search_value", ""),
-                        display=rx.cond(TableState.search_value, "flex", "none"),
+                        on_click=lambda: TableState.setvar("search_value_entregables", ""),
+                        display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
-                    value=TableState.search_value,
+                    cursor="pointer",
+                    value=TableState.search_value_entregables,
                     placeholder="Search here...",
                     size="3",
                     max_width=["150px", "150px", "200px", "250px"],
                     width="100%",
                     variant="surface",
                     color_scheme="gray",
-                    on_change=TableState.set_search_value,
+                    on_change=lambda value: TableState.setvar("search_value_entregables", value),
                 ),
                 align="center",
                 justify="end",
@@ -269,6 +270,7 @@ def main_table_2() -> rx.Component:
                 "Descargar Plantilla",
                 size="3",
                 variant="solid",
+                cursor="pointer",
                 on_click=rx.download(url="/prueba.xlsx"),
             ),
             #boton de descarga
@@ -277,6 +279,7 @@ def main_table_2() -> rx.Component:
                 "Agregar",
                 size="3",
                 color_scheme="green",
+                cursor="pointer",
                 variant="solid",
                 display=["none", "none", "none", "flex"],
                 on_click=rx.redirect("/agregarEntregables"),

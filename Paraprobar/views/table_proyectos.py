@@ -214,7 +214,7 @@ def main_table() -> rx.Component:
             rx.flex(
                 #condicional para cambiar el orden de los iconos de ordenar la tabla 
                 rx.cond(
-                    TableState.sort_reverse,
+                    TableState.sort_reverse_proyectos,
                     rx.icon(
                         "arrow-down-z-a",
                         size=28,
@@ -253,16 +253,16 @@ def main_table() -> rx.Component:
                         justify="end",
                         cursor="pointer",
                         on_click=TableState.setvar("search_value", ""),
-                        display=rx.cond(TableState.search_value, "flex", "none"),
+                        display=rx.cond(TableState.search_value_proyectos, "flex", "none"),
                     ),
-                    value=TableState.search_value,
-                    placeholder="Search here...",
+                    value=TableState.search_value_proyectos,
+                    placeholder="Search by the first 5 columns",
                     size="3",
-                    max_width=["150px", "150px", "200px", "250px"],
+                    max_width=["400px", "450px", "500px", "550px"],  # Increased max_width values
                     width="100%",
                     variant="surface",
                     color_scheme="gray",
-                    on_change=TableState.set_search_value,
+                    on_change=lambda value: TableState.setvar("search_value_proyectos", value),
                 ),
                 align="center",
                 justify="end",
@@ -273,6 +273,7 @@ def main_table() -> rx.Component:
                 rx.icon("arrow-down-to-line", size=20),
                 "Descargar Plantilla",
                 size="3",
+                cursor="pointer",
                 variant="solid",
                 on_click=rx.download(url="/prueba.xlsx"),
             ),
@@ -283,6 +284,7 @@ def main_table() -> rx.Component:
                 size="3",
                 color_scheme="green",
                 variant="solid",
+                cursor="pointer",
                 display=["none", "none", "none", "flex"],
                 on_click=rx.redirect("/agregarProyectos"),
             ),
