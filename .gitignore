@@ -7,7 +7,7 @@ __pycache__/
 .states
 .web
 
-
+Prototipo/Paraprobar/repository/database.py
 assets/external/
 .env
 node_modules/

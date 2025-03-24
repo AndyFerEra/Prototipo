@@ -5,12 +5,27 @@ from ultralytics import YOLO
 from typing import List
 from ..repository.database import get_session
 from ..models.entregable_model import Entregable
+from .constans import map_disciplinas, map_clasificacion_entregable, map_tipo_entregable
+from ..models.excel_data import Proyectos
+from typing import Optional
 
 # Cargar el modelo YOLO
 ruta_modelo = os.path.join(os.path.dirname(__file__), "modelos", "best.pt")
 if not os.path.exists(ruta_modelo):
     raise FileNotFoundError(f"El archivo del modelo no existe en: {ruta_modelo}")
 modelo_yolo = YOLO(ruta_modelo)
+
+def normalizar_valor_con_mapeo(valor, mapeo):
+    """
+    Busca un valor en el mapeo y devuelve la clave correspondiente si hay coincidencia.
+    Si no encuentra, retorna 'Seleccionar'.
+    """
+    valor_limpio = valor.strip().lower()
+    for clave, variantes in mapeo.items():
+        for variante in variantes:
+            if variante.strip().lower() == valor_limpio:
+                return clave
+    return "Seleccionar"
 
 class TableStatePDF(rx.State):
     upload_success: bool = False
@@ -30,6 +45,13 @@ class TableStatePDF(rx.State):
     show_alert_entregables: bool = False
     show_alert_hh: bool = False
     show_uploader: bool = True
+    proyecto_valido: Optional[bool] = None  # None: No verificado, True: Existe, False
+
+    def verificar_proyecto(self, codigo_proyecto: str):
+        """Verifica si el código del proyecto existe en la base de datos."""
+        with get_session() as session:
+            proyecto = session.query(Proyectos).filter_by(codigo_proyecto=codigo_proyecto).first()
+            self.proyecto_valido = proyecto is not None
 
     async def handle_upload(self, files: List[rx.UploadFile]):
         """Maneja la subida de archivos y los guarda en la carpeta de uploads."""
@@ -63,9 +85,9 @@ class TableStatePDF(rx.State):
         try:
             result = process_pdf(self.uploaded_file_path, modelo_yolo)
             self.codigo_proyecto = result['Código de proyecto']
-            self.disciplina = result['Disciplina']
-            self.clasificacion_entregable = result['Clasificación de entregable']
-            self.tipo_entregable = result['Tipo de entregable']
+            self.disciplina = normalizar_valor_con_mapeo(result.get('Disciplina', ""), map_disciplinas)
+            self.clasificacion_entregable = normalizar_valor_con_mapeo(result.get('Clasificación de entregable', ""), map_clasificacion_entregable)
+            self.tipo_entregable = normalizar_valor_con_mapeo(result.get('Tipo de entregable', ""), map_tipo_entregable)
             self.codigo_entregable = result['Código de entregable']
             self.extracted_data = True
             self.upload_success = True
@@ -106,22 +128,75 @@ class TableStatePDF(rx.State):
         self.show_summary = True
         print("Validaciones completadas. Resumen activado.")
 
-    def guardar_datos(self):
-        """Inserta los datos en la base de datos."""
-        with get_session() as session:
-            entregable = Entregable(
-                nombre_entregable=self.nombre_entregable,
-                codigo_proyecto=self.codigo_proyecto,
-                disciplina=self.disciplina,
-                clasificacion_entregable=self.clasificacion_entregable,
-                tipo_entregable=self.tipo_entregable,
-                codigo_entregable=self.codigo_entregable,
-                total_hh=float(self.total_hh),
-            )
-            session.add(entregable)
-            session.commit()
+    disciplina_map = {
+        "Geotecnia": "00GEOTECNIA",
+        "Concreto": "01CONCRETO",
+        "Estructuras": "02ESTRUCTURAS",
+        "Arquitectura": "03ARQUITECTURA",
+        "Mecánica": "04MECANICA",
+        "Tuberías": "05TUBERIAS",
+        "Eléctrica": "06ELECTRICA",
+        "Instrumentación": "07INSTRUMENTACION",
+        "Procesos": "08PROCESOS",
+        "General": "99GENERAL",
+        "BIM": "35BIM",
+        "Costos": "25COSTOS",
+    }
 
-        return rx.window_alert("Datos guardados exitosamente.")
+    def guardar_datos(self):
+        """Guarda los datos del entregable y mueve el PDF al directorio final."""
+        # Validar que los campos requeridos estén completos
+        if not all([self.codigo_proyecto, self.disciplina, self.nombre_entregable, self.uploaded_file_path]):
+            return rx.window_alert("Faltan datos necesarios para guardar el entregable.")
+
+        # Obtener disciplina modificada
+        disciplina_modificado = self.disciplina_map.get(self.disciplina, "99GENERAL")
+
+        # Construir la ruta final
+        base_dir = r"C:\Users\Leo\COBRA PERU S.A\Base_de_datos_Ingenieria - Documentos\General\BD Entregables"
+        ruta_final = os.path.join(
+            base_dir,
+            self.codigo_proyecto,
+            disciplina_modificado,
+        )
+
+        # Crear el directorio si no existe
+        if not os.path.exists(ruta_final):
+            os.makedirs(ruta_final)
+
+        # Ruta completa del archivo final
+        archivo_final = os.path.join(ruta_final, f"{self.nombre_entregable}.pdf")
+
+        try:
+            # Mover el archivo desde la carpeta temporal a la ruta final
+            os.rename(self.uploaded_file_path, archivo_final)
+            print(f"Archivo movido exitosamente a: {archivo_final}")
+
+            # Eliminar el archivo temporal en /static/uploads
+            if os.path.exists(self.uploaded_file_path):
+                os.remove(self.uploaded_file_path)
+                print(f"Archivo temporal eliminado: {self.uploaded_file_path}")
+
+            # Guardar los datos en la base de datos
+            with get_session() as session:
+                entregable = Entregable(
+                    nombre_entregable=self.nombre_entregable,
+                    codigo_proyecto=self.codigo_proyecto,
+                    disciplina=self.disciplina,
+                    clasificacion_entregable=self.clasificacion_entregable,
+                    tipo_entregable=self.tipo_entregable,
+                    codigo_entregable=self.codigo_entregable,
+                    total_hh=float(self.total_hh) if self.total_hh else None,
+                )
+                session.add(entregable)
+                session.commit()
+
+            # Mostrar alerta de éxito
+            return rx.window_alert(f"El entregable ha sido guardado correctamente en:\n{archivo_final}")
+
+        except Exception as e:
+            print(f"Error al guardar el archivo: {e}")
+            return rx.window_alert("Error al guardar el entregable. Revisa la consola para más información.")
 
 
 
