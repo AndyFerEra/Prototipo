@@ -1,5 +1,6 @@
 import reflex as rx
 from ..backend.pdf_state import TableStatePDF
+from ..backend.constans import disciplinas, clasificacion_entregable, tipo_entregable
 
 def file_upload_PDF() -> rx.Component:
     return rx.box(
@@ -60,6 +61,7 @@ def file_upload_PDF() -> rx.Component:
                                 value=TableStatePDF.nombre_entregable,
                                 on_change=TableStatePDF.set_nombre_entregable,
                                 placeholder="Nombre del Entregable",
+                                color_scheme="crimson",
                                 aling="right",
                                 width="70%",
                             ),
@@ -85,17 +87,61 @@ def file_upload_PDF() -> rx.Component:
                             justify_content="space-between",
                         ),
                         rx.hstack(
-                            rx.text("Código de proyecto:", width="150px", align="left", font_weight="bold", color="#1e252b"),
+                            rx.text(
+                                "Código de proyecto:",
+                                width="150px",
+                                align="left",
+                                font_weight="bold",
+                                color="#1e252b",
+                            ),
                             rx.input(
                                 value=TableStatePDF.codigo_proyecto,
-                                on_change=TableStatePDF.set_codigo_proyecto,
+                                on_change=[
+                                    TableStatePDF.set_codigo_proyecto,
+                                    lambda e: TableStatePDF.verificar_proyecto(e),  # Verifica el código al cambiar
+                                ],
                                 placeholder="Código de proyecto",
+                                color_scheme="crimson",
                                 aling="right",
                                 width="70%",
                             ),
+                            rx.cond(
+                                TableStatePDF.proyecto_valido == True,
+                                rx.tooltip(
+                                    rx.icon(
+                                        "circle_check",  # Ícono para proyecto encontrado
+                                        size=20,
+                                        color="green",
+                                        display="flex",
+                                    ),
+                                    content="El proyecto existe en la base de datos",  # Mensaje para proyecto encontrado
+                                    placement="top",
+                                    background_color="green",
+                                    color="white",
+                                    border_radius="6px",
+                                    padding="0.5rem",
+                                ),
+                                rx.cond(
+                                    TableStatePDF.proyecto_valido == False,
+                                    rx.tooltip(
+                                        rx.icon(
+                                            "circle_alert",  # Ícono para proyecto no encontrado
+                                            size=20,
+                                            color="#e9004c",
+                                            display="flex",
+                                        ),
+                                        content="El proyecto no existe en la base de datos",  # Mensaje para proyecto no encontrado
+                                        placement="top",
+                                        background_color="#e9004c",
+                                        color="white",
+                                        border_radius="6px",
+                                        padding="0.5rem",
+                                    ),
+                                ),
+                            ),
                             rx.tooltip(
                                 rx.icon(
-                                    "circle_alert",
+                                    "circle_alert",  # Ícono por defecto si el campo está vacío
                                     size=20,
                                     color="#e9004c",
                                     display=rx.cond(
@@ -104,7 +150,7 @@ def file_upload_PDF() -> rx.Component:
                                         "none"
                                     ),
                                 ),
-                                content="Debe rellenar el campo Código de proyecto",
+                                content="Debe rellenar el campo Código de proyecto",  # Mensaje si el campo está vacío
                                 placement="top",
                                 background_color="#e9004c",
                                 color="white",
@@ -116,12 +162,14 @@ def file_upload_PDF() -> rx.Component:
                         ),
                         rx.hstack(
                             rx.text("Disciplina:", width="150px", align="left", font_weight="bold", color="#1e252b"),
-                            rx.input(
+                            rx.select(
+                                disciplinas,
                                 value=TableStatePDF.disciplina,
                                 on_change=TableStatePDF.set_disciplina,
                                 placeholder="Disciplina",
+                                color_scheme="crimson",
                                 aling="right",
-                                width="70%",
+                                width="67%",
                             ),
                             rx.tooltip(
                                 rx.icon(
@@ -146,12 +194,14 @@ def file_upload_PDF() -> rx.Component:
                         ),
                         rx.hstack(
                             rx.text("Clasificación de entregable:", width="150px", align="left", font_weight="bold", color="#1e252b"),
-                            rx.input(
+                            rx.select(
+                                clasificacion_entregable,
                                 value=TableStatePDF.clasificacion_entregable,
                                 on_change=TableStatePDF.set_clasificacion_entregable,
                                 placeholder="Clasificación de entregable",
+                                color_scheme="crimson",
                                 aling="right",
-                                width="70%",
+                                width="67%",
                             ),
                             rx.tooltip(
                                 rx.icon(
@@ -176,12 +226,14 @@ def file_upload_PDF() -> rx.Component:
                         ),
                         rx.hstack(
                             rx.text("Tipo de entregable:", width="150px", align="left", font_weight="bold", color="#1e252b"),
-                            rx.input(
+                            rx.select(
+                                tipo_entregable,
                                 value=TableStatePDF.tipo_entregable,
                                 on_change=TableStatePDF.set_tipo_entregable,
-                                placeholder="Tipo de entregable",
+                                placeholder="Tipo de entregable", 
+                                color_scheme="crimson",
                                 aling="right",
-                                width="70%",
+                                width="67%",
                             ),
                             rx.tooltip(
                                 rx.icon(
@@ -210,6 +262,7 @@ def file_upload_PDF() -> rx.Component:
                                 value=TableStatePDF.codigo_entregable,
                                 on_change=TableStatePDF.set_codigo_entregable,
                                 placeholder="Código de entregable",
+                                color_scheme="crimson",
                                 aling="right",
                                 width="70%",
                             ),
@@ -240,6 +293,7 @@ def file_upload_PDF() -> rx.Component:
                                 value=TableStatePDF.total_hh,
                                 on_change=TableStatePDF.set_total_hh,
                                 placeholder="Total HH",
+                                color_scheme="crimson",
                                 aling="right",
                                 width="70%",
                             ),
@@ -276,9 +330,9 @@ def file_upload_PDF() -> rx.Component:
                                     disabled=rx.cond(
                                         (TableStatePDF.nombre_entregable == "") |
                                         (TableStatePDF.codigo_proyecto == "") |
-                                        (TableStatePDF.disciplina == "") |
-                                        (TableStatePDF.clasificacion_entregable == "") |
-                                        (TableStatePDF.tipo_entregable == "") |
+                                        (TableStatePDF.disciplina == "Seleccionar") |
+                                        (TableStatePDF.clasificacion_entregable == "Seleccionar") |
+                                        (TableStatePDF.tipo_entregable == "Seleccionar") |
                                         (TableStatePDF.codigo_entregable == "") |
                                         (TableStatePDF.total_hh == ""),
                                         True,
