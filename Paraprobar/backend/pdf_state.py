@@ -1,5 +1,6 @@
 import reflex as rx
 import os
+from .pdf_processor import process_pdf
 from ultralytics import YOLO
 from typing import List
 from ..repository.database import get_session
@@ -71,8 +72,31 @@ class TableStatePDF(rx.State):
             self.uploaded_file = file.name
             self.file_url = f"/static/uploads/{file.name}"
             self.uploaded_file_path = file_path
-        
-        self.extracted_data = True
+
+        await self.handle_upload_pdf()
+
+    async def handle_upload_pdf(self):
+        """Procesa el archivo PDF subido y extrae la información."""
+        if not self.uploaded_file_path:
+            self.upload_success = False
+            self.is_loading = False
+            return
+
+        try:
+            result = process_pdf(self.uploaded_file_path, modelo_yolo)
+            self.codigo_proyecto = result['Código de proyecto']
+            self.disciplina = normalizar_valor_con_mapeo(result.get('Disciplina', ""), map_disciplinas)
+            self.clasificacion_entregable = normalizar_valor_con_mapeo(result.get('Clasificación de entregable', ""), map_clasificacion_entregable)
+            self.tipo_entregable = normalizar_valor_con_mapeo(result.get('Tipo de entregable', ""), map_tipo_entregable)
+            self.codigo_entregable = result['Código de entregable']
+            self.extracted_data = True
+            self.upload_success = True
+            self.show_uploader = False
+        except Exception as e:
+            print(f"Error al procesar el PDF: {e}")
+            self.upload_success = False
+        finally:
+            self.is_loading = False
 
     def codigo_existe(self, codigo):
         """Verifica si el código del entregable ya existe en la base de datos."""
