@@ -73,6 +73,7 @@ class TableStatePDF(rx.State):
             self.uploaded_file_path = file_path
 
         self.extracted_data = True
+        self.show_uploader = False
 
     def codigo_existe(self, codigo):
         """Verifica si el código del entregable ya existe en la base de datos."""
