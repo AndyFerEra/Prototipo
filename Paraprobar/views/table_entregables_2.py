@@ -72,6 +72,10 @@ def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
     bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
     hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
 
+    # Construir las rutas accesibles del servidor
+    enlace_pdf_url = f"http://localhost:8011/{item.enlace_pdf.replace('C:\\Users\\Leo\\COBRA PERU S.A\\', '').replace('\\', '/')}"
+    enlace_nativo_url = f"http://localhost:8011/{item.enlace_nativo.replace('C:\\Users\\Leo\\COBRA PERU S.A\\', '').replace('\\', '/')}"
+
     return rx.table.row(
         rx.table.cell(item.id),
         rx.table.cell(item.codigo_proyecto_entregables),
@@ -80,8 +84,32 @@ def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
         rx.table.cell(item.codigo_entregable),
         rx.table.cell(item.nombre_entregable),
         rx.table.cell(item.total_hh if item.total_hh is not None else ""),
-        rx.table.cell(item.enlace_pdf),
-        rx.table.cell(item.enlace_nativo),
+        rx.table.cell(
+            rx.link(
+                rx.hstack(
+                    rx.text("PDF"),
+                    rx.icon("file-text", size=20),  # Ícono para el PDF
+                    align="center",
+                    spacing="1",
+                ),
+                href=enlace_pdf_url,  # Usar la URL del servidor
+                target="_blank",
+                style={"color": "green"},
+            )
+        ),
+        rx.table.cell(
+            rx.link(
+                rx.hstack(  # Usar hstack para alinear el texto y el ícono horizontalmente
+                    rx.text("ORIGINAL"),  # Texto para el enlace
+                    rx.icon("file", size=20),  # Ícono editable
+                    align="center",  # Centrar contenido horizontalmente
+                    spacing="1",  # Espaciado entre el texto y el ícono
+                ),
+                href=enlace_nativo_url,  # URL del servidor
+                target="_blank",
+                style={"color": "blue"},
+            )
+        ),
         style={"_hover": {"bg": hover_color}, "bg": bg_color},
         align="center",
     )
