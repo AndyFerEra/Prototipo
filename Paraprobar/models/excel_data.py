@@ -69,6 +69,6 @@ class Entregables(SQLModel, table=True):
     tipo_entregable_entre: str
     codigo_entregable: str
     nombre_entregable: str
-    total_hh: Optional[int] = None
+    total_hh: float
     enlace_pdf: str
     enlace_nativo: str

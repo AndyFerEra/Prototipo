@@ -1,10 +1,10 @@
 import reflex as rx
 import os
-from .pdf_processor import process_pdf
 from ultralytics import YOLO
 from typing import List
 from ..repository.database import get_session
-from ..models.entregable_model import Entregable
+# from ..models.entregable_model import Entregable
+from ..models.excel_data import Entregables
 from .constans import map_disciplinas, map_clasificacion_entregable, map_tipo_entregable
 from ..models.excel_data import Proyectos
 from typing import Optional
@@ -47,6 +47,30 @@ class TableStatePDF(rx.State):
     show_uploader: bool = True
     proyecto_valido: Optional[bool] = None  # None: No verificado, True: Existe, False
 
+    @rx.var
+    def pdf_component(self) -> rx.Component:
+        """Componente memoizado del visor PDF"""
+        return rx.vstack(
+            rx.hstack(
+                rx.icon("circle_check", size=20, color="green", margin_top="0.1rem"),
+                rx.text(f"Archivo subido: {self.uploaded_file}", color="#1e252b"),
+            ),
+            rx.html(
+                f"""
+                <div>
+                    <iframe src="http://localhost:8001/static/uploads/{self.uploaded_file}" 
+                            width="250%" 
+                            height="500px" 
+                            style="border: none;"
+                            loading="lazy">
+                    </iframe>
+                </div>
+                """,
+                key=f"pdf-iframe-{self.uploaded_file}"  # Clave única para evitar re-renders
+            ),
+            spacing="2",
+        )
+
     def verificar_proyecto(self, codigo_proyecto: str):
         """Verifica si el código del proyecto existe en la base de datos."""
         with get_session() as session:
@@ -54,7 +78,8 @@ class TableStatePDF(rx.State):
             self.proyecto_valido = proyecto is not None
 
     async def handle_upload(self, files: List[rx.UploadFile]):
-        """Maneja la subida de archivos y los guarda en la carpeta de uploads."""
+        print("DEBUG: handle_upload ejecutado")
+        """Maneja la subida de archivos y actualiza la clase PDFViewer."""
         if not files:
             return rx.window_alert("No se seleccionó ningún archivo.")
 
@@ -73,35 +98,13 @@ class TableStatePDF(rx.State):
             self.file_url = f"/static/uploads/{file.name}"
             self.uploaded_file_path = file_path
 
-        await self.handle_upload_pdf()
-
-    async def handle_upload_pdf(self):
-        """Procesa el archivo PDF subido y extrae la información."""
-        if not self.uploaded_file_path:
-            self.upload_success = False
-            self.is_loading = False
-            return
-
-        try:
-            result = process_pdf(self.uploaded_file_path, modelo_yolo)
-            self.codigo_proyecto = result['Código de proyecto']
-            self.disciplina = normalizar_valor_con_mapeo(result.get('Disciplina', ""), map_disciplinas)
-            self.clasificacion_entregable = normalizar_valor_con_mapeo(result.get('Clasificación de entregable', ""), map_clasificacion_entregable)
-            self.tipo_entregable = normalizar_valor_con_mapeo(result.get('Tipo de entregable', ""), map_tipo_entregable)
-            self.codigo_entregable = result['Código de entregable']
-            self.extracted_data = True
-            self.upload_success = True
-            self.show_uploader = False
-        except Exception as e:
-            print(f"Error al procesar el PDF: {e}")
-            self.upload_success = False
-        finally:
-            self.is_loading = False
-
+        self.extracted_data = True
+        self.show_uploader = False
+    
     def codigo_existe(self, codigo):
         """Verifica si el código del entregable ya existe en la base de datos."""
         with get_session() as session:
-            return session.query(Entregable).filter_by(codigo_entregable=codigo).first() is not None
+            return session.query(Entregables).filter_by(codigo_entregable=codigo).first() is not None
 
     def corregir_y_guardar(self):
         """Valida los datos y ajusta los estados para mostrar mensajes o el resumen."""
@@ -179,14 +182,16 @@ class TableStatePDF(rx.State):
 
             # Guardar los datos en la base de datos
             with get_session() as session:
-                entregable = Entregable(
+                entregable = Entregables(
                     nombre_entregable=self.nombre_entregable,
-                    codigo_proyecto=self.codigo_proyecto,
-                    disciplina=self.disciplina,
+                    codigo_proyecto_entregables=self.codigo_proyecto,
+                    disciplina_entregables=self.disciplina,
                     clasificacion_entregable=self.clasificacion_entregable,
-                    tipo_entregable=self.tipo_entregable,
+                    tipo_entregable_entre=self.tipo_entregable,
                     codigo_entregable=self.codigo_entregable,
                     total_hh=float(self.total_hh) if self.total_hh else None,
+                    enlace_pdf=archivo_final,
+                    enlace_nativo=archivo_final,
                 )
                 session.add(entregable)
                 session.commit()

@@ -1,8 +1,18 @@
 import reflex as rx
 from ..backend.pdf_state import TableStatePDF
+from ..backend.pdf_viewer import PDFState
 from ..backend.constans import disciplinas, clasificacion_entregable, tipo_entregable
 
 def file_upload_PDF() -> rx.Component:
+    # Componente memoizado para el visor PDF
+    @rx.memo
+    def render_pdf_viewer():
+        return rx.cond(
+            TableStatePDF.uploaded_file,
+            TableStatePDF.pdf_component,
+            rx.text("No hay archivo cargado", color="#666")
+        )
+
     return rx.box(
         rx.heading("Subir PDF", size="3", margin_bottom="1rem", color="#e9004c"),
         rx.vstack(
@@ -28,23 +38,8 @@ def file_upload_PDF() -> rx.Component:
                     flex_direction=["column", "row"],
                 ),
             ),
-            rx.cond(
-                TableStatePDF.uploaded_file,
-                rx.vstack(
-                    rx.hstack(
-                        rx.icon("circle_check", size=20, color="green", margin_top="0.1rem"),
-                        rx.text(f"Archivo subido: {TableStatePDF.uploaded_file}", color="#1e252b"),
-                    ),
-                    rx.html(
-                        f"""
-                        <div>
-                            <iframe src="http://localhost:8001/static/uploads/{TableStatePDF.uploaded_file}" width="250%" height="500px" style="border: none;"></iframe>
-                        </div>
-                        """
-                    ),
-                    spacing="2",
-                ),
-            ),
+            # Visor PDF memoizado
+            render_pdf_viewer(),
             spacing="2",
         ),
         rx.cond(
