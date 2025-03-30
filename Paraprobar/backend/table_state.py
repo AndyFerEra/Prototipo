@@ -21,8 +21,6 @@ class Item(rx.Base):
 
 class TableState(rx.State):
     """La clase State."""
-
-    loading_progress: int = 0
     items: List[ExcelData] = []
         
     search_value: str = ""
@@ -42,12 +40,11 @@ class TableState(rx.State):
 
     total_items: int = 0
     offset: int = 0
-    limit: int = 20  # Número de filas por página
+    limit: int = 15  # Número de filas por página
 
     uploaded_file_name: str = ""
     upload_success: bool = False
     error_message: str = ""
-    
     
     def reset_upload_state_entregables(self):
         """Restablece el estado de la subida de archivo y redirige."""
@@ -56,6 +53,12 @@ class TableState(rx.State):
         return rx.redirect("/") 
 
     #Para las busquedas y ordenamiento
+    def set_search_value_entregables(self, value: str):
+        """Actualiza el valor de búsqueda y recarga los datos"""
+        self.search_value_entregables = value
+        self.offset = 0  # Resetear a la primera página
+        return self.load_entries_entregables()
+
     @rx.var(cache=True)
     def filtered_sorted_items(self) -> List[Item]:
         
@@ -227,19 +230,27 @@ class TableState(rx.State):
         end_index = start_index + self.limit
         return self.filtered_sorted_items_entregables[start_index:end_index]
 
-    def prev_page(self):
-        if self.page_number > 1:
-            self.offset -= self.limit
-
     def next_page(self):
-        if self.page_number < self.total_pages:
+        """Avanzar a la siguiente página"""
+        if (self.offset + self.limit) < self.total_items:
             self.offset += self.limit
+            return self.load_entries_entregables()  # <-- Asegúrate de llamar a load_entries_entregables
+
+    def prev_page(self):
+        """Retroceder a la página anterior"""
+        if self.offset > 0:
+            self.offset -= self.limit
+            return self.load_entries_entregables()  # <-- Asegúrate de llamar a load_entries_entregables
 
     def first_page(self):
+        """Ir a la primera página"""
         self.offset = 0
+        return self.load_entries_entregables()  # Faltaba este return
 
     def last_page(self):
+        """Ir a la última página"""
         self.offset = (self.total_pages - 1) * self.limit
+        return self.load_entries_entregables()  # Faltaba este return
             
     #para la lectura y subida de datos        
             
@@ -520,71 +531,50 @@ class TableState(rx.State):
             
 #cargar datos de bd de entregables
     def load_entries_entregables(self):
-        """Carga los datos y actualiza la barra de progreso dinámicamente."""
+        """Carga optimizada con paginación directa en SQL"""
         try:
-            self.loading_progress = 10  # Inicia la barra de carga
-            yield  # 🔄 Actualiza la interfaz
-
-            start_time = time.time()
-
-            datos_db = select_all_entregables_2()  # Cargar datos de la BD
-            db_time = time.time()
-            self.loading_progress = 50  # A mitad del proceso
-            yield  # 🔄 Actualiza la interfaz
-
-            # Procesar datos
-            self.loading_progress = 65  # Procesando datos
-            yield  
-
-            self.items = [
-                Entregables(
-                    id=item.id,
-                    codigo_proyecto_entregables=item.codigo_proyecto_entregables,
-                    disciplina_entregables=item.disciplina_entregables,
-                    clasificacion_entregable=item.clasificacion_entregable,
-                    tipo_entregable_entre=item.tipo_entregable_entre,
-                    codigo_entregable=item.codigo_entregable,
-                    nombre_entregable=item.nombre_entregable,
-                    total_hh=item.total_hh,
-                    enlace_pdf=item.enlace_pdf,
-                    enlace_nativo=item.enlace_nativo,
-                )
-                for item in datos_db
-            ]
-            
-            self.loading_progress = 80  # Datos casi listos
-            yield  
-
-            process_time = time.time()
-            self.total_items = len(self.items)
-
-            self.loading_progress = 90  # Preparando para mostrar
-            yield  
-
-            print(f"✅ Se cargaron {self.total_items} datos de entregables.")
-            print(f"⏱ BD/Caché: {db_time - start_time:.4f} s")
-            print(f"⏳ Procesamiento: {process_time - db_time:.4f} s")
-            print(f"🚀 Total: {process_time - start_time:.4f} s")
-
-            # Simulación de espera para UX
-            time.sleep(0.5)
-
-            self.loading_progress = 90  # Carga completada
-            yield  
-
-            time.sleep(5)
-            self.loading_progress = 0  # Ocultar barra
-            yield  
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_entregables)
+            with Session(engine) as session:
+                # Consulta base
+                query = select(Entregables)
+                
+                # Aplicar filtro de búsqueda
+                if self.search_value_entregables:
+                    search = f"%{self.search_value_entregables.lower()}%"
+                    query = query.where(
+                        or_(
+                            Entregables.nombre_entregable.ilike(search),
+                            Entregables.codigo_entregable.ilike(search),
+                            Entregables.clasificacion_entregable.ilike(search),
+                            Entregables.codigo_proyecto_entregables.ilike(search),
+                            Entregables.disciplina_entregables.ilike(search),
+                            Entregables.tipo_entregable_entre.ilike(search)
+                        )
+                    )
+                
+                # Contar total de registros
+                self.total_items = session.exec(
+                    select(func.count()).select_from(query.subquery())
+                ).one()
+                
+                # Aplicar ordenamiento
+                if self.sort_value_entregables:
+                    field = getattr(Entregables, self.sort_value_entregables)
+                    direction = desc if self.sort_reverse_entregables else asc
+                    query = query.order_by(direction(field))
+                
+                # Aplicar paginación (IMPORTANTE: usar self.offset y self.limit)
+                query = query.offset(self.offset).limit(self.limit)
+                self.items = session.exec(query).all()
+                
         except Exception as e:
-            print(f"❌ Error al cargar los datos de la base de datos: {e}")
-            self.loading_progress = 0  # Reset en caso de error
-            yield  # 🔄 Asegura que se oculta la barra    
+            print(f"Error al cargar entregables: {e}")
+            self.items = []
+            self.total_items = 0
 
-    def start_loading(self):
-            """Inicia la barra de carga antes de que la vista cargue los datos."""
-            self.loading_progress = 1
-            yield
+    @rx.var
+    def get_current_page_entregables(self) -> list[Entregables]:
+        """Versión optimizada con caché"""
+        return self.items
 
     def toggle_sort_entregables(self):
         self.sort_reverse_entregables = not self.sort_reverse_entregables

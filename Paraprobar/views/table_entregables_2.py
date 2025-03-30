@@ -69,12 +69,16 @@ def _header_cell(text: str, icon: str) -> rx.Component:
     )
 
 def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
+    # Función segura para generar URLs
+    def safe_path(path):
+        return rx.cond(
+            path,
+            f"http://localhost:8011/{path.replace('C:\\Users\\Leo\\COBRA PERU S.A\\', '').replace('\\', '/')}",
+            "#"
+        )
+
     bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
     hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
-
-    # Construir las rutas accesibles del servidor
-    enlace_pdf_url = f"http://localhost:8011/{item.enlace_pdf.replace('C:\\Users\\Leo\\COBRA PERU S.A\\', '').replace('\\', '/')}"
-    enlace_nativo_url = f"http://localhost:8011/{item.enlace_nativo.replace('C:\\Users\\Leo\\COBRA PERU S.A\\', '').replace('\\', '/')}"
 
     return rx.table.row(
         rx.table.cell(item.id),
@@ -85,29 +89,37 @@ def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
         rx.table.cell(item.nombre_entregable),
         rx.table.cell(item.total_hh if item.total_hh is not None else ""),
         rx.table.cell(
-            rx.link(
-                rx.hstack(
-                    rx.text("PDF"),
-                    rx.icon("file-text", size=20),  # Ícono para el PDF
-                    align="center",
-                    spacing="1",
+            rx.cond(
+                item.enlace_pdf,
+                rx.link(
+                    rx.hstack(
+                        rx.text("PDF"),
+                        rx.icon("file-text", size=20),
+                        align="center",
+                        spacing="1",
+                    ),
+                    href=safe_path(item.enlace_pdf),
+                    target="_blank",
+                    style={"color": "green"},
                 ),
-                href=enlace_pdf_url,  # Usar la URL del servidor
-                target="_blank",
-                style={"color": "green"},
+                rx.text("-")
             )
         ),
         rx.table.cell(
-            rx.link(
-                rx.hstack(  # Usar hstack para alinear el texto y el ícono horizontalmente
-                    rx.text("ORIGINAL"),  # Texto para el enlace
-                    rx.icon("file", size=20),  # Ícono editable
-                    align="center",  # Centrar contenido horizontalmente
-                    spacing="1",  # Espaciado entre el texto y el ícono
+            rx.cond(
+                item.enlace_nativo,
+                rx.link(
+                    rx.hstack(
+                        rx.text("ORIGINAL"),
+                        rx.icon("file", size=20),
+                        align="center",
+                        spacing="1",
+                    ),
+                    href=safe_path(item.enlace_nativo),
+                    target="_blank",
+                    style={"color": "blue"},
                 ),
-                href=enlace_nativo_url,  # URL del servidor
-                target="_blank",
-                style={"color": "blue"},
+                rx.text("-")
             )
         ),
         style={"_hover": {"bg": hover_color}, "bg": bg_color},
@@ -275,18 +287,13 @@ def main_table_2() -> rx.Component:
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=lambda: TableState.setvar("search_value_entregables", ""),
+                        on_click=lambda: TableState.set_search_value_entregables(""),  # Limpiar búsqueda
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
-                    cursor="pointer",
                     value=TableState.search_value_entregables,
-                    placeholder="Search here...",
-                    size="3",
-                    max_width=["150px", "150px", "200px", "250px"],
+                    placeholder="Buscar...",
+                    on_change=TableState.set_search_value_entregables,  # Actualizar al escribir
                     width="100%",
-                    variant="surface",
-                    color_scheme="gray",
-                    on_change=lambda value: TableState.setvar("search_value_entregables", value),
                 ),
                 align="center",
                 justify="end",

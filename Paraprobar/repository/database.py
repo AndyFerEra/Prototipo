@@ -1,4 +1,5 @@
 from sqlmodel import create_engine, Session, select,SQLModel
+from sqlmodel import select, Session, func, or_, asc, desc
 from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables
 from ..models.entregable_model import Entregable
 from dotenv import load_dotenv
@@ -52,5 +53,36 @@ def select_all_entregables_2():
     with Session(engine) as session:
         statement = select(Entregables)
         results = session.exec(statement)
-        return results.all() 
+        return results.all()
+    
+def get_entregables_paginados(
+    search: str = "", 
+    sort_field: str = None, 
+    sort_desc: bool = False,
+    offset: int = 0, 
+    limit: int = 20
+) -> tuple[list[Entregables], int]:
+    """Obtiene entregables con paginación, búsqueda y ordenamiento"""
+    with Session(engine) as session:
+        query = select(Entregables)
         
+        if search:
+            search_term = f"%{search.lower()}%"
+            query = query.where(
+                or_(
+                    Entregables.nombre_entregable.ilike(search_term),
+                    Entregables.codigo_entregable.ilike(search_term),
+                    Entregables.codigo_proyecto_entregables.ilike(search_term),
+                    Entregables.disciplina_entregables.ilike(search_term),
+                    Entregables.tipo_entregable_entre.ilike(search_term)
+                )
+            )
+        
+        total = session.exec(select(func.count()).select_from(query.subquery())).one()
+        
+        if sort_field:
+            field = getattr(Entregables, sort_field)
+            query = query.order_by(desc(field) if sort_desc else asc(field))
+        
+        items = session.exec(query.offset(offset).limit(limit)).all()
+        return items, total

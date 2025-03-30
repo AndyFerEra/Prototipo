@@ -1,6 +1,5 @@
 import reflex as rx
 from ..backend.pdf_state import TableStatePDF
-from ..backend.pdf_viewer import PDFState
 from ..backend.constans import disciplinas, clasificacion_entregable, tipo_entregable
 
 def file_upload_PDF() -> rx.Component:

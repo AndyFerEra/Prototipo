@@ -20,9 +20,9 @@ tipo_entregable = [
 ]
 
 map_disciplinas = {
-    "Geotecnia": [" Geotecnia ", "Geotecnia"],
+    "Geotecnia": [" Geotecnia ", "Geotecnia", "Geotecnía", "Geotécnia"],
     "Arquitectura": ["Arquitectura"],
-    "": ["BIM"],
+    "BIM": ["BIM", "BIM ", " BIM"],
     "Concreto": ["Concreto"],
     "Costos": ["Costos", "Costos "],
     "Eléctrica": ["Eléctrica"],
