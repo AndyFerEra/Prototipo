@@ -144,6 +144,8 @@ class TableStatePDF(rx.State):
     }
 
     def guardar_datos(self):
+        # Obtener el nombre de usuario de la PC
+        USER_NAME = os.getlogin()
         """Guarda los datos del entregable y mueve el PDF al directorio final."""
         # Validar que los campos requeridos estén completos
         if not all([self.codigo_proyecto, self.disciplina, self.nombre_entregable, self.uploaded_file_path]):
@@ -153,7 +155,14 @@ class TableStatePDF(rx.State):
         disciplina_modificado = self.disciplina_map.get(self.disciplina, "99GENERAL")
 
         # Construir la ruta final
-        base_dir = r"C:\Users\Leo\COBRA PERU S.A\Base_de_datos_Ingenieria - Documentos\General\BD Entregables"
+        base_dir = os.path.join(
+            r"C:\Users",
+            USER_NAME,
+            "COBRA PERU S.A",
+            "Base_de_datos_Ingenieria - Documentos",
+            "General",
+            "BD Entregables"
+        )
         ruta_final = os.path.join(
             base_dir,
             self.codigo_proyecto,

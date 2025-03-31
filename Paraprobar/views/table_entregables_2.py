@@ -1,61 +1,13 @@
 import reflex as rx
 
 from Paraprobar.models.excel_data import Entregables
-from ..backend.table_state import Item, TableState
+from ..backend.table_state import TableState
 from ..components.status_badge import status_badge
 import time
+import os
 
-#trae la informacion de la tabla para poder mostrarlo en diferentes vista
-def _create_dialog(
-    item: Item, icon_name: str, color_scheme: str, dialog_title: str
-) -> rx.Component:
-    return rx.dialog.root(
-        rx.dialog.trigger(
-            rx.icon_button(
-                rx.icon(icon_name), color_scheme=color_scheme, size="2", variant="solid"
-            )
-        ),
-        rx.dialog.content(
-            rx.vstack(
-                rx.dialog.title(dialog_title),
-                rx.dialog.description(
-                    rx.vstack(
-                        rx.text(item.pipeline),
-                        rx.text(item.workflow),
-                        status_badge(item.status),
-                        rx.text(item.timestamp),
-                        rx.text(item.duration),
-                    )
-                ),
-                rx.dialog.close(
-                    rx.button("Close Dialog", size="2", color_scheme=color_scheme),
-                ),
-            ),
-        ),
-    )
-
-#para los botones falta la logica
-def _delete_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "trash-2", "tomato", "Delete Dialog")
-
-
-def _approve_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "check", "grass", "Approve Dialog")
-
-
-def _edit_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "square-pen", "blue", "Edit Dialog")
-
-#botones agrupados
-def _dialog_group(item: Item) -> rx.Component:
-    return rx.hstack(
-        _approve_dialog(item),
-        _edit_dialog(item),
-        _delete_dialog(item),
-        align="center",
-        spacing="2",
-        width="100%",
-    )
+# Obtener el nombre de usuario de la PC
+USER_NAME = os.getlogin()
 
 #personalizacion del encabezado de tabla
 def _header_cell(text: str, icon: str, options: list[str] = None) -> rx.Component:
@@ -83,6 +35,14 @@ def _header_cell(text: str, icon: str, options: list[str] = None) -> rx.Componen
 
 
 def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
+    # Función segura para generar URLs
+    def safe_path(path):
+        return rx.cond(
+            path,
+            f"http://localhost:8011/{path.replace(f'C:\\Users\\{USER_NAME}\\COBRA PERU S.A\\', '').replace('\\', '/')}",
+            "#"
+        )
+
     bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
     hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
 
@@ -95,10 +55,38 @@ def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
         rx.table.cell(item.nombre_entregable),
         rx.table.cell(item.total_hh if item.total_hh is not None else ""),
         rx.table.cell(
-            rx.link("Ver PDF", href=item.enlace_pdf, is_external=True, color="white")
+            rx.cond(
+                item.enlace_pdf,
+                rx.link(
+                    rx.hstack(
+                        rx.text("PDF"),
+                        rx.icon("file-text", size=20),
+                        align="center",
+                        spacing="1",
+                    ),
+                    href=safe_path(item.enlace_pdf),
+                    target="_blank",
+                    style={"color": "green"},
+                ),
+                rx.text("-")
+            )
         ),
         rx.table.cell(
-            rx.link("Ver Nativo", href=item.enlace_nativo, is_external=True, color="white" )
+            rx.cond(
+                item.enlace_nativo,
+                rx.link(
+                    rx.hstack(
+                        rx.text("ORIGINAL"),
+                        rx.icon("file", size=20),
+                        align="center",
+                        spacing="1",
+                    ),
+                    href=safe_path(item.enlace_nativo),
+                    target="_blank",
+                    style={"color": "blue"},
+                ),
+                rx.text("-")
+            )
         ),
         style={"_hover": {"bg": hover_color}, "bg": bg_color},
         align="center",
@@ -231,19 +219,13 @@ def main_table_2() -> rx.Component:
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=TableState.setvar("search_value_entregables", ""),
+                        on_click=lambda: TableState.set_search_value_entregables(""),  # Limpiar búsqueda
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
-                    cursor="pointer",
                     value=TableState.search_value_entregables,
-                    placeholder="Search here...",
-                    size="3",
-                    max_length=500,
-                    max_width=["150px", "150px", "200px", "250px"],
+                    placeholder="Buscar...",
+                    on_change=TableState.set_search_value_entregables,  # Actualizar al escribir
                     width="100%",
-                    variant="surface",
-                    color_scheme="gray",
-                    on_change=lambda value: TableState.setvar("search_value_entregables", value),
                 ),
                 align="center",
                 justify="end",
