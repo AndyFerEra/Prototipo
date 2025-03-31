@@ -9,6 +9,10 @@ from ..models import ExcelData,Reglas,Proyectos,Entregables
 from ..models.entregable_model import Entregable
 import time
 import reflex as rx
+from elasticsearch import Elasticsearch
+
+# Agrega esto al inicio del archivo
+es = Elasticsearch("http://localhost:9200")
 
 class Item(rx.Base):
     """La clase Item."""
@@ -45,6 +49,64 @@ class TableState(rx.State):
     uploaded_file_name: str = ""
     upload_success: bool = False
     error_message: str = ""
+
+    pdf_matches: dict = {}  # Almacenará coincidencias en PDFs por código de entregable
+    
+    def search_in_elasticsearch(self, search_term: str):
+        """Busca en Elasticsearch y guarda resultados"""
+        with self:
+            self.pdf_matches = {}  # Limpiar resultados anteriores
+            
+            if not search_term:
+                return
+                
+            try:
+                query = {
+                    "query": {
+                        "match": {
+                            "texto": {
+                                "query": search_term,
+                                "operator": "and"
+                            }
+                        }
+                    },
+                    "_source": ["codigo_entregable", "pagina", "texto"],
+                    "size": 1000  # Aumentar si hay muchos resultados
+                }
+                
+                result = es.search(index="pdf_documents", body=query)
+                
+                for hit in result['hits']['hits']:
+                    codigo = hit['_source']['codigo_entregable']
+                    if codigo not in self.pdf_matches:
+                        self.pdf_matches[codigo] = []
+                    
+                    texto = hit['_source']['texto']
+                    term_lower = search_term.lower()
+                    texto_lower = texto.lower()
+                    inicio = texto_lower.find(term_lower)
+                    
+                    # Extraer fragmento de contexto
+                    fragmento = texto[max(0, inicio-50):min(len(texto), inicio+len(term_lower)+50)] if inicio != -1 else ""
+                    
+                    self.pdf_matches[codigo].append({
+                        "pagina": hit['_source']['pagina'],
+                        "fragmento": fragmento.strip() if fragmento else ""
+                    })
+                    
+            except Exception as e:
+                print(f"Error en búsqueda Elasticsearch: {e}")
+
+    def set_search_value_entregables(self, value: str):
+        """Actualiza el valor de búsqueda y realiza la búsqueda"""
+        self.search_value_entregables = value
+        self.offset = 0  # Resetear a la primera página
+        
+        # Realizar búsqueda en Elasticsearch
+        self.search_in_elasticsearch(value)
+        
+        # Recargar los entregables
+        return self.load_entries_entregables()
     
     def reset_upload_state_entregables(self):
         """Restablece el estado de la subida de archivo y redirige."""
@@ -537,7 +599,12 @@ class TableState(rx.State):
                 # Consulta base
                 query = select(Entregables)
                 
-                # Aplicar filtro de búsqueda
+                # Si hay búsqueda y coincidencias en PDF, priorizar esos entregables
+                if self.search_value_entregables and self.pdf_matches:
+                    codigos_con_coincidencias = list(self.pdf_matches.keys())
+                    query = query.where(Entregables.codigo_entregable.in_(codigos_con_coincidencias))
+                
+                # Aplicar filtro de búsqueda en columnas
                 if self.search_value_entregables:
                     search = f"%{self.search_value_entregables.lower()}%"
                     query = query.where(
@@ -562,7 +629,7 @@ class TableState(rx.State):
                     direction = desc if self.sort_reverse_entregables else asc
                     query = query.order_by(direction(field))
                 
-                # Aplicar paginación (IMPORTANTE: usar self.offset y self.limit)
+                # Aplicar paginación
                 query = query.offset(self.offset).limit(self.limit)
                 self.items = session.exec(query).all()
                 
