@@ -86,6 +86,24 @@ def _show_item_reglas(item: Reglas, index: int) -> rx.Component:
         align="center",
     )
 
+def _show_buttons_row() -> rx.Component:
+    return rx.table.row(
+        rx.table.cell(rx.button("+", size="3", color_scheme="green", on_click=lambda: rx.console_log("Agregar en Cod Disc"))),
+        rx.table.cell(rx.button("+", size="3", color_scheme="green", on_click=lambda: rx.console_log("Agregar en Disciplina"))),
+        rx.table.cell(rx.button("+", size="3", color_scheme="green", on_click=lambda: rx.console_log("Agregar en Tipo Entrgbl"))),
+        rx.table.cell(rx.button("+", size="3", color_scheme="green", on_click=lambda: rx.console_log("Agregar en Cod TED"))),
+        rx.table.cell(rx.button("+", size="3", color_scheme="green", on_click=lambda: rx.console_log("Agregar en TED"))),
+        rx.table.cell(rx.button("+", size="3", color_scheme="green", on_click=lambda: rx.console_log("Agregar en Sector"))),
+        rx.table.cell(rx.button("+", size="3", color_scheme="green", on_click=lambda: rx.console_log("Agregar en Etapa de Ingeniería"))),
+        rx.table.cell(rx.button("+", size="3", color_scheme="green", on_click=lambda: rx.console_log("Agregar en Estado"))),
+        style={"bg": rx.color("gray", 2)},
+        align="center",
+    )
+
+
+
+
+
 #sin decir pa la paginacion
 def _pagination_view() -> rx.Component:
     return (
@@ -191,7 +209,6 @@ def file_upload_reglas() -> rx.Component:
 def main_table() -> rx.Component:
     return rx.box(
         #ordenar mayor menor y busqueda y boton de descarga
-        
         rx.flex(
             #ordenar mayor menor y busqueda 
             rx.flex(
@@ -215,24 +232,11 @@ def main_table() -> rx.Component:
                         on_click=TableState.toggle_sort_reglas,
                     ),
                 ),
-                #combo box para ordenar la tabla
-                rx.select(
-                    [
-                        "Cod Disc",
-                        "Disciplina",
-                        "Sector",
-                        "Etp Ing",
-                        "Estado",
-                    ],
-                    placeholder="Clasificar por: Disciplina",
-                    size="3",
-                    on_change=TableState.set_sort_value,
-                ),
                 #todo pa buscar
                 rx.input(
                 rx.input.slot(rx.icon("search")),
                 rx.input.slot(
-                    rx.icon("x"),
+                    rx.icon("eraser"),
                     justify="end",
                     cursor="pointer",
                     on_click=TableState.setvar("search_value_reglas", ""),
@@ -295,7 +299,9 @@ def main_table() -> rx.Component:
                 rx.foreach(
                     TableState.get_current_page_reglas,
                     lambda item, index: _show_item_reglas(item, index),
-                )
+                ),
+                _show_buttons_row(),
+                #_add_row_buttons(),  # Agregar fila de botones al final
             ),
             variant="surface",
             size="3",

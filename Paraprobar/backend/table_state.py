@@ -24,6 +24,7 @@ class TableState(rx.State):
 
     loading_progress: int = 0
     items: List[ExcelData] = []
+    filtered_items: List[Entregables] = []
         
     search_value: str = ""
     search_value_reglas: str = ""
@@ -47,7 +48,73 @@ class TableState(rx.State):
     uploaded_file_name: str = ""
     upload_success: bool = False
     error_message: str = ""
+    filters: dict[str, str] = {}  # Diccionario para almacenar los filtros aplicados
     
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_cod_pry(self) -> list[str]:
+        """Retorna una lista de códigos de proyecto únicos."""
+        return list(get_unique_values_by_column("codigo_proyecto_entregables")) or []
+    
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_disciplina(self) -> list[str]:
+        """Retorna una lista de códigos de proyecto únicos."""
+        return list(get_unique_values_by_column("disciplina_entregables")) or []
+    
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_tip_entre(self) -> list[str]:
+        """Retorna una lista de códigos de proyecto únicos."""
+        return list(get_unique_values_by_column("clasificacion_entregable")) or []
+    
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_cod_entregable(self) -> list[str]:
+        """Retorna una lista de códigos de proyecto únicos."""
+        return list(get_unique_values_by_column("tipo_entregable_entre")) or []
+    
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_nomb_entre(self) -> list[str]:
+        """Retorna una lista de códigos de proyecto únicos."""
+        return list(get_unique_values_by_column("codigo_entregable")) or []
+    
+    def set_filter(self, column: str, value: str):
+        """Actualiza el filtro y aplica cambios en los datos."""
+        if value:  # Solo filtra si el valor no está vacío
+            self.filters[column] = value
+        else:
+            self.filters.pop(column, None)  # Elimina el filtro si está vacío
+        
+        #self.apply_filters()
+
+    def apply_filters(self):
+        """Filtra los elementos según los filtros seleccionados."""
+        if not self.filters:
+            self.filtered_items = self.items  # Si no hay filtros, muestra todos los datos
+            return
+        
+        self.filtered_items = [
+            item for item in self.items
+            if all(
+                str(getattr(item, col, "")).startswith(val)  # Convierte a str para evitar errores
+                for col, val in self.filters.items()
+            )
+        ]
+    
+    def apply_table_filters(self) -> None:
+        """Aplica los filtros de la tabla sin afectar la paginación."""
+        if not self.filters:
+            self.filtered_sorted_items_entregables = self.items  # Mostrar todo si no hay filtros
+            return
+
+        self.filtered_sorted_items_entregables = [
+            item for item in self.items
+            if all(
+                str(getattr(item, col, "")).startswith(val)  # 🔥 Filtra por coincidencias
+                for col, val in self.filters.items()
+            )
+        ]
+    
+    def refresh(self):
+        """Método para actualizar la tabla."""
+        self.dirty += 1  # Esto forzará un refresco de la tabla
     
     def reset_upload_state_entregables(self):
         """Restablece el estado de la subida de archivo y redirige."""
@@ -116,6 +183,8 @@ class TableState(rx.State):
                         "sector", #Sector
                         "etapa_ingenieria",  # ETp Ing
                         "estado", #Estado
+                        "codigo_ted", #Cod TED
+                        "ted", #TED
                     ]
                 )
             ]
@@ -139,6 +208,7 @@ class TableState(rx.State):
         # Filtrar elementos basados en el valor de búsqueda
         if self.search_value_proyectos:
             search_value = self.search_value_proyectos.lower()
+            print(f"🔎 Buscando: {search_value}")
             items = [
                 item
                 for item in items
@@ -156,38 +226,52 @@ class TableState(rx.State):
 
         return items
 
-    @rx.var(cache=True)
-    def filtered_sorted_items_entregables(self) -> List[Entregables]:
-        
-        items = self.items 
+    @rx.var(cache=False, initial_value=[])
+    def filtered_sorted_items_entregables(self) -> list[Entregables]:
+        """Aplica filtros, búsqueda y ordenación antes de paginar los datos."""
+        data = select_all_entregables_2()  # Asegúrate de que esta función trae todos los datos
 
-        # Filtrar elementos basados en el valor de ordenación seleccionado
-        if self.sort_value_entregables:
-            items = sorted(
-                items,
-                key=lambda item: str(getattr(item, self.sort_value_entregables)).lower(),
-                reverse=self.sort_reverse_entregables,
-            )
+        # Aplicar los filtros combo box
+        for column, value in self.filters.items():
+            if column == "Codigo Pry":
+                data = [item for item in data if item.codigo_proyecto_entregables == value]
+            elif column == "Disciplina":
+                data = [item for item in data if item.disciplina_entregables == value]
+            elif column == "Tipo Entrgbl":
+                data = [item for item in data if item.tipo_entregable_entre == value]
+            elif column == "Codigo Entrgbl":
+                data = [item for item in data if item.codigo_entregable == value]
+            elif column == "Nombre Entrgbl":
+                data = [item for item in data if item.nombre_entregable == value]
 
         # Filtrar elementos basados en el valor de búsqueda
         if self.search_value_entregables:
             search_value = self.search_value_entregables.lower()
-            items = [
+            print(f"🔎 Buscando: {search_value}")
+            data = [
                 item
-                for item in items
+                for item in data
                 if any(
                     search_value in str(getattr(item, attr)).lower()
                     for attr in [
-                        "nombre_entregable", #Nombre Entrgbl
-                        "codigo_entregable", #Codigo Entrgbl
-                        "codigo_proyecto_entregables",#Codigo Pry
-                        "disciplina_entregables", #Disciplina
-                        "tipo_entregable_entre", #Tipo Entrgbl
+                        "codigo_proyecto_entregables", # Codigo Pry
+                        "disciplina_entregables", # Disciplina
+                        "tipo_entregable_entre", # Tipo Entrgbl
+                        "codigo_entregable", # Codigo Entrgbl
+                        "nombre_entregable", # Nombre Entrgbl
                     ]
                 )
             ]
 
-        return items
+        # Ordenar elementos basados en el valor de ordenación seleccionado
+        if self.sort_value_entregables:
+            data = sorted(
+                data,
+                key=lambda item: str(getattr(item, self.sort_value_entregables)).lower(),
+                reverse=self.sort_reverse_entregables,
+            )
+
+        return data
 
     @rx.var(cache=True)
     def page_number(self) -> int:
@@ -212,7 +296,7 @@ class TableState(rx.State):
         start_index = self.offset
         end_index = start_index + self.limit
         return self.filtered_sorted_items_reglas[start_index:end_index]
-    
+        
     #tabla proyectos falta ver bien del todo 
     @rx.var(cache=True, initial_value=[])
     def get_current_page_proyectos(self) -> list[Proyectos]:
@@ -552,6 +636,7 @@ class TableState(rx.State):
                 for item in datos_db
             ]
             
+            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_entregables)
             self.loading_progress = 80  # Datos casi listos
             yield  
 
@@ -575,7 +660,7 @@ class TableState(rx.State):
             time.sleep(5)
             self.loading_progress = 0  # Ocultar barra
             yield  
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_entregables)
+            
         except Exception as e:
             print(f"❌ Error al cargar los datos de la base de datos: {e}")
             self.loading_progress = 0  # Reset en caso de error

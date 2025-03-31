@@ -249,10 +249,10 @@ def main_table() -> rx.Component:
                 rx.input(
                     rx.input.slot(rx.icon("search")),
                     rx.input.slot(
-                        rx.icon("x"),
+                        rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=TableState.setvar("search_value", ""),
+                        on_click=TableState.setvar("search_value_proyectos", ""),
                         display=rx.cond(TableState.search_value_proyectos, "flex", "none"),
                     ),
                     value=TableState.search_value_proyectos,

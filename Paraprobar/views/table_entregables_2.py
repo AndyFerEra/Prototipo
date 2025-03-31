@@ -58,15 +58,29 @@ def _dialog_group(item: Item) -> rx.Component:
     )
 
 #personalizacion del encabezado de tabla
-def _header_cell(text: str, icon: str) -> rx.Component:
+def _header_cell(text: str, icon: str, options: list[str] = None) -> rx.Component:
+    # Asegurar que options sea una lista (vacía si es None)
+    options = [] if options is None else options
+
+    children = [rx.icon(icon, size=18), rx.text(text)]
+
     return rx.table.column_header_cell(
         rx.hstack(
-            rx.icon(icon, size=18),
-            rx.text(text),
-            align="center",
-            spacing="2",
+            *children,
+            rx.cond(
+                options,  # Solo muestra el select si hay opciones
+                rx.select(
+                    options,  # Aquí options siempre será una lista válida
+                    on_change=lambda value: TableState.set_filter(text, value),
+                    width="0px 0px 10px 0px",
+                ),
+                rx.box()  # Si no hay opciones, coloca un elemento vacío
+            ),
+            align_items="center",
+            spacing="0",
         ),
     )
+
 
 def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
     bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
@@ -80,8 +94,12 @@ def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
         rx.table.cell(item.codigo_entregable),
         rx.table.cell(item.nombre_entregable),
         rx.table.cell(item.total_hh if item.total_hh is not None else ""),
-        rx.table.cell(item.enlace_pdf),
-        rx.table.cell(item.enlace_nativo),
+        rx.table.cell(
+            rx.link("Ver PDF", href=item.enlace_pdf, is_external=True, color="white")
+        ),
+        rx.table.cell(
+            rx.link("Ver Nativo", href=item.enlace_nativo, is_external=True, color="white" )
+        ),
         style={"_hover": {"bg": hover_color}, "bg": bg_color},
         align="center",
     )
@@ -206,40 +224,6 @@ def main_table_2() -> rx.Component:
         rx.flex(
             #ordenar mayor menor y busqueda 
             rx.flex(
-                #condicional para cambiar el orden de los iconos de ordenar la tabla 
-                rx.cond(
-                    TableState.sort_reverse_entregables,
-                    rx.icon(
-                        "arrow-down-z-a",
-                        size=28,
-                        stroke_width=1.5,
-                        cursor="pointer",
-                        flex_shrink="0",
-                        on_click=TableState.toggle_sort_entregables,
-                    ),
-                    rx.icon(
-                        "arrow-down-a-z",
-                        size=28,
-                        stroke_width=1.5,
-                        cursor="pointer",
-                        flex_shrink="0",
-                        on_click=TableState.toggle_sort_entregables,
-                    ),
-                ),
-                #combo box para ordenar la tabla
-                rx.select(
-                    [
-                        "pipeline",
-                        "status",
-                        "workflow",
-                        "timestamp",
-                        "duration",
-                    ],
-                    placeholder="Sort By: Pipeline",
-                    size="3",
-                    cursor="pointer",
-                    on_change=TableState.set_sort_value,
-                ),
                 #todo pa buscar
                 rx.input(
                     rx.input.slot(rx.icon("search")),
@@ -247,13 +231,14 @@ def main_table_2() -> rx.Component:
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=lambda: TableState.setvar("search_value_entregables", ""),
+                        on_click=TableState.setvar("search_value_entregables", ""),
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
                     cursor="pointer",
                     value=TableState.search_value_entregables,
                     placeholder="Search here...",
                     size="3",
+                    max_length=500,
                     max_width=["150px", "150px", "200px", "250px"],
                     width="100%",
                     variant="surface",
@@ -292,14 +277,13 @@ def main_table_2() -> rx.Component:
         ),
         rx.table.root(
             rx.table.header(
-                #iconos y nombre del encabezado de tabla
                 rx.table.row(
                     _header_cell("ID", "hash"),
-                    _header_cell("Codigo Pry", "folder-git"),
-                    _header_cell("Disciplina", "list-collapse"),
-                    _header_cell("Tipo Entrgbl", "square-stack"),
-                    _header_cell("Codigo Entrgbl", "folder-code"),
-                    _header_cell("Nombre Entrgbl", "folder-pen"),
+                    _header_cell("Codigo Pry", "folder-git", options=TableState.unique_codigo_proyectos_cod_pry),
+                    _header_cell("Disciplina", "list-collapse", options=TableState.unique_codigo_proyectos_disciplina),
+                    _header_cell("Tipo Entrgbl", "square-stack", options=TableState.unique_codigo_proyectos_tip_entre),
+                    _header_cell("Codigo Entrgbl", "folder-code", options=TableState.unique_codigo_proyectos_cod_entregable),
+                    _header_cell("Nombre Entrgbl", "folder-pen", options=TableState.unique_codigo_proyectos_nomb_entre),
                     _header_cell("HH Venta", "hourglass"),
                     _header_cell("PDF", "file-text"),
                     _header_cell("Editable", "pencil-line"),
