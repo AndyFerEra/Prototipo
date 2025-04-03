@@ -315,28 +315,7 @@ class TableState(rx.State):
         return self.load_entries_entregables()  # Faltaba este return
             
     #para la lectura y subida de datos        
-            
-    #cargar datos de bd de prueba
-    def load_entries(self):
-        try:
-            datos_db = select_all()  # Obtiene los datos desde la base de datos
-            print(f"Datos obtenidos: {datos_db}")  # Debugging
-
-            self.items = [
-                ExcelData(
-                    id=item.id,
-                    nombre=item.nombre,
-                    edad=item.edad,
-                    email=item.email,
-                )
-                for item in datos_db
-            ]
-
-            self.total_items = len(self.items)
-            print(f"Se cargaron {self.total_items} registros desde la base de datos.")
-
-        except Exception as e:
-            print(f"Error al cargar los datos de la base de datos: {e}")        
+           
             
     def toggle_sort(self):
         self.sort_reverse = not self.sort_reverse

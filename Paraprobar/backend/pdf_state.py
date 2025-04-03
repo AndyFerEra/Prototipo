@@ -45,7 +45,18 @@ class TableStatePDF(rx.State):
     show_alert_entregables: bool = False
     show_alert_hh: bool = False
     show_uploader: bool = True
+
     proyecto_valido: Optional[bool] = None  # None: No verificado, True: Existe, False
+    uploaded_file_original: str = ""  # Nombre del archivo original subido
+    file_url_original: str = ""  # URL del archivo original subido
+    uploaded_file_path_original: str = ""  # Ruta del archivo original
+    has_pdf: bool = False
+    has_original: bool = False
+
+    show_alert_pdf_exists: bool = False
+    show_alert_original_exists: bool = False
+    show_alert_missing_pdf: bool = False
+    show_alert_missing_original: bool = False
 
     @rx.var
     def pdf_component(self) -> rx.Component:
@@ -70,35 +81,128 @@ class TableStatePDF(rx.State):
             ),
             spacing="2",
         )
+    
+    @rx.var
+    def original_file_component(self) -> rx.Component:
+        """Componente para mostrar información del archivo original"""
+        return rx.vstack(
+            rx.hstack(
+                rx.icon("circle_check", size=20, color="green", margin_top="0.1rem"),
+                rx.text(f"Archivo original subido: {self.uploaded_file_original}", color="#1e252b"),
+            ),
+            rx.box(
+                rx.text(f"Tipo: {self.uploaded_file_original.split('.')[-1].upper()}"),
+                border="1px solid #ccc",
+                padding="1rem",
+                border_radius="4px",
+                width="177%",
+                background="#f8f9fa"
+            ),
+            spacing="2",
+        )
 
     def verificar_proyecto(self, codigo_proyecto: str):
         """Verifica si el código del proyecto existe en la base de datos."""
         with get_session() as session:
-            proyecto = session.query(Proyectos).filter_by(codigo_proyecto=codigo_proyecto).first()
+            proyecto = session.query(Entregables).filter_by(codigo_proyecto_entregables=codigo_proyecto).first()
             self.proyecto_valido = proyecto is not None
 
     async def handle_upload(self, files: List[rx.UploadFile]):
-        print("DEBUG: handle_upload ejecutado")
-        """Maneja la subida de archivos y actualiza la clase PDFViewer."""
+        """Maneja la subida de archivos con validación de tipos según lo que ya existe en BD"""
+        print(f"Archivos recibidos: {[f.filename for f in files]}")
+        
         if not files:
-            return rx.window_alert("No se seleccionó ningún archivo.")
-
+            return rx.window_alert("Debe subir al menos un archivo")
+        
         self.is_loading = True
         upload_dir = os.path.join("Paraprobar", "static", "uploads")
         if not os.path.exists(upload_dir):
             os.makedirs(upload_dir)
 
-        for file in files:
-            file_path = os.path.join(upload_dir, file.name)
-            with open(file_path, "wb") as f:
+        self.has_pdf = False
+        self.has_original = False
+        
+        try:
+            # Procesar archivos primero para determinar tipos
+            for file in files:
+                file_path = os.path.join(upload_dir, file.filename)
+                print(f"Procesando archivo: {file.filename}")
+                
                 content = await file.read()
-                f.write(content)
+                if not content:
+                    continue
+                    
+                with open(file_path, "wb") as f:
+                    f.write(content)
 
-            self.uploaded_file = file.name
-            self.file_url = f"/static/uploads/{file.name}"
-            self.uploaded_file_path = file_path
+                if file.filename.lower().endswith('.pdf'):
+                    self.uploaded_file = file.filename
+                    self.file_url = f"/static/uploads/{file.filename}"
+                    self.uploaded_file_path = file_path
+                    self.has_pdf = True
+                else:
+                    self.uploaded_file_original = file.filename
+                    self.file_url_original = f"/static/uploads/{file.filename}"
+                    self.uploaded_file_path_original = file_path
+                    self.has_original = True
 
-        await self.handle_upload_pdf()
+            # Verificar estado en BD
+            existe, tiene_pdf, tiene_original = self.get_entregable_existente(self.codigo_entregable)
+
+            # Configurar estados para mostrar el Alert Dialog adecuado
+            self.show_alert_entregables = False
+            self.show_alert_pdf_exists = False
+            self.show_alert_original_exists = False
+            self.show_alert_missing_pdf = False
+            self.show_alert_missing_original = False
+
+            # Validar según lo que ya existe
+            if existe:
+                # Caso 1: Ambos archivos ya existen
+                if tiene_pdf and tiene_original:
+                    self.show_alert_entregables = True
+                    self.is_loading = False
+                    return
+                
+                # Caso 2: Ya tiene PDF y estamos subiendo otro PDF
+                if tiene_pdf and self.has_pdf:
+                    self.show_alert_pdf_exists = True
+                    self.is_loading = False
+                    return
+                
+                # Caso 3: Ya tiene original y estamos subiendo otro original
+                if tiene_original and self.has_original:
+                    self.show_alert_original_exists = True
+                    self.is_loading = False
+                    return
+
+                # Caso 4: Falta PDF pero estamos subiendo original
+                if not tiene_pdf and self.has_original:
+                    self.show_alert_missing_pdf = True
+                    self.is_loading = False
+                    return
+                    
+                # Caso 5: Falta original pero estamos subiendo PDF
+                if not tiene_original and self.has_pdf:
+                    self.show_alert_missing_original = True
+                    self.is_loading = False
+                    return
+
+            # Si es un nuevo archivo o reemplazo válido, procesar
+            if self.has_pdf:
+                await self.handle_upload_pdf()
+            else:
+                # Mostrar formulario para archivos no PDF
+                self.extracted_data = True
+                self.upload_success = True
+                self.show_uploader = False
+                
+        except Exception as e:
+            print(f"Error en handle_upload: {str(e)}")
+            self.is_loading = False
+            return rx.window_alert(f"Error al procesar archivos: {str(e)}")
+        finally:
+            self.is_loading = False
 
     async def handle_upload_pdf(self):
         """Procesa el archivo PDF subido y extrae la información."""
@@ -123,23 +227,23 @@ class TableStatePDF(rx.State):
         finally:
             self.is_loading = False
     
-    def codigo_existe(self, codigo):
-        """Verifica si el código del entregable ya existe en la base de datos."""
+    def get_entregable_existente(self, codigo: str) -> tuple[bool, bool, bool]:
+        """Verifica si el código del entregable ya existe y el estado de sus enlaces"""
         with get_session() as session:
-            return session.query(Entregables).filter_by(codigo_entregable=codigo).first() is not None
-
+            entregable = session.query(Entregables).filter_by(codigo_entregable=codigo).first()
+            if not entregable:
+                return (False, False, False)
+            
+            tiene_pdf = bool(entregable.enlace_pdf)
+            tiene_original = bool(entregable.enlace_nativo)
+            return (True, tiene_pdf, tiene_original)
+    
     def corregir_y_guardar(self):
         """Valida los datos y ajusta los estados para mostrar mensajes o el resumen."""
         # Reiniciar estados para evitar conflictos
         self.show_summary = False
         self.show_alert_entregables = False
         self.show_alert_hh = False
-
-        # Validar si el código del entregable ya existe
-        if self.codigo_existe(self.codigo_entregable):
-            self.show_alert_entregables = True
-            print("Error: El código del entregable ya existe.")
-            return
 
         # Validar el campo Total HH como número válido
         try:
@@ -148,6 +252,28 @@ class TableStatePDF(rx.State):
             self.show_alert_hh = True
             print("Error: El campo Total HH no es válido.")
             return
+
+        # Verificar estado del entregable existente
+        existe, tiene_pdf, tiene_original = self.get_entregable_existente(self.codigo_entregable)
+        
+        if existe:
+            # Caso 1: Ambos enlaces están llenos - NO PERMITIR
+            if tiene_pdf and tiene_original:
+                self.show_alert_entregables = True
+                print("Error: El código del entregable ya existe con ambos archivos.")
+                return
+            
+            # Caso 2: Falta PDF pero estamos subiendo un original
+            if not tiene_pdf and self.has_original:
+                self.show_alert_entregables = True
+                print("Error: Solo puede subir PDF para este entregable existente.")
+                return
+            
+            # Caso 3: Falta original pero estamos subiendo un PDF
+            if not tiene_original and self.has_pdf:
+                self.show_alert_entregables = True
+                print("Error: Solo puede subir archivo original para este entregable existente.")
+                return
 
         # Si todo está bien, activar el estado para mostrar el resumen
         self.show_summary = True
@@ -169,10 +295,10 @@ class TableStatePDF(rx.State):
     }
 
     def guardar_datos(self):
-        """Guarda los datos del entregable y mueve el PDF al directorio final."""
+        """Guarda los datos del entregable y mueve los archivos al directorio final"""
         # Validar que los campos requeridos estén completos
-        if not all([self.codigo_proyecto, self.disciplina, self.nombre_entregable, self.uploaded_file_path]):
-            return rx.window_alert("Faltan datos necesarios para guardar el entregable.")
+        if not all([self.codigo_proyecto, self.disciplina, self.nombre_entregable, self.codigo_entregable]):
+            return rx.window_alert("Faltan datos necesarios para guardar el entregable")
 
         # Obtener disciplina modificada
         disciplina_modificado = self.disciplina_map.get(self.disciplina, "99GENERAL")
@@ -189,44 +315,83 @@ class TableStatePDF(rx.State):
         if not os.path.exists(ruta_final):
             os.makedirs(ruta_final)
 
-        # Ruta completa del archivo final
-        archivo_final = os.path.join(ruta_final, f"{self.nombre_entregable}.pdf")
-
+        # Generar nombres basados en el código de entregable
+        nombre_base = self.codigo_entregable.replace("/", "-")
+        
         try:
-            # Mover el archivo desde la carpeta temporal a la ruta final
-            os.rename(self.uploaded_file_path, archivo_final)
-            print(f"Archivo movido exitosamente a: {archivo_final}")
+            # Mover y renombrar archivos
+            archivo_final_pdf = ""
+            archivo_final_original = ""
+            
+            if self.has_pdf:
+                extension_pdf = os.path.splitext(self.uploaded_file)[1] or ".pdf"
+                archivo_final_pdf = os.path.join(ruta_final, f"{nombre_base}{extension_pdf}")
+                os.rename(self.uploaded_file_path, archivo_final_pdf)
+                print(f"PDF renombrado y movido a: {archivo_final_pdf}")
+            
+            if self.has_original:
+                extension_original = os.path.splitext(self.uploaded_file_original)[1]
+                archivo_final_original = os.path.join(ruta_final, f"{nombre_base}{extension_original}")
+                os.rename(self.uploaded_file_path_original, archivo_final_original)
+                print(f"Archivo original renombrado y movido a: {archivo_final_original}")
 
-            # Eliminar el archivo temporal en /static/uploads
-            if os.path.exists(self.uploaded_file_path):
-                os.remove(self.uploaded_file_path)
-                print(f"Archivo temporal eliminado: {self.uploaded_file_path}")
+            # Eliminar archivos temporales
+            for temp_file in [self.uploaded_file_path, self.uploaded_file_path_original]:
+                if temp_file and os.path.exists(temp_file):
+                    try:
+                        os.remove(temp_file)
+                    except:
+                        pass
 
-            # Guardar los datos en la base de datos
+            # Guardar en la base de datos
             with get_session() as session:
-                entregable = Entregables(
-                    nombre_entregable=self.nombre_entregable,
-                    codigo_proyecto_entregables=self.codigo_proyecto,
-                    disciplina_entregables=self.disciplina,
-                    clasificacion_entregable=self.clasificacion_entregable,
-                    tipo_entregable_entre=self.tipo_entregable,
-                    codigo_entregable=self.codigo_entregable,
-                    total_hh=float(self.total_hh) if self.total_hh else None,
-                    enlace_pdf=archivo_final,
-                    enlace_nativo=archivo_final,
-                )
-                session.add(entregable)
+                entregable_existente = session.query(Entregables).filter_by(
+                    codigo_entregable=self.codigo_entregable
+                ).first()
+                
+                if entregable_existente:
+                    # Actualizar solo los campos que faltan
+                    if self.has_pdf and not entregable_existente.enlace_pdf:
+                        entregable_existente.enlace_pdf = archivo_final_pdf
+                    if self.has_original and not entregable_existente.enlace_nativo:
+                        entregable_existente.enlace_nativo = archivo_final_original
+                    
+                    # Actualizar otros campos
+                    entregable_existente.nombre_entregable = self.nombre_entregable
+                    entregable_existente.total_hh = float(self.total_hh) if self.total_hh else None
+                    # entregable_existente.codigo_proyecto_entregables = self.codigo_proyecto
+                    # entregable_existente.disciplina_entregables = self.disciplina
+                    entregable_existente.clasificacion_entregable = self.clasificacion_entregable
+                    entregable_existente.tipo_entregable_entre = self.tipo_entregable
+                else:
+                    # Crear nuevo entregable
+                    entregable = Entregables(
+                        nombre_entregable=self.nombre_entregable,
+                        codigo_proyecto_entregables=self.codigo_proyecto,
+                        disciplina_entregables=self.disciplina,
+                        clasificacion_entregable=self.clasificacion_entregable,
+                        tipo_entregable_entre=self.tipo_entregable,
+                        codigo_entregable=self.codigo_entregable,
+                        total_hh=float(self.total_hh) if self.total_hh else None,
+                        enlace_pdf=archivo_final_pdf if self.has_pdf else "",
+                        enlace_nativo=archivo_final_original if self.has_original else "",
+                    )
+                    session.add(entregable)
+                
                 session.commit()
 
             # Mostrar alerta de éxito
-            return rx.window_alert(f"El entregable ha sido guardado correctamente en:\n{archivo_final}")
+            mensaje = "Entregable guardado correctamente:\n"
+            if self.has_pdf:
+                mensaje += f"PDF: {archivo_final_pdf}\n"
+            if self.has_original:
+                mensaje += f"Original: {archivo_final_original}"
+            return rx.window_alert(mensaje)
 
         except Exception as e:
-            print(f"Error al guardar el archivo: {e}")
-            return rx.window_alert("Error al guardar el entregable. Revisa la consola para más información.")
-
-
-
+            print(f"Error al guardar: {e}")
+            return rx.window_alert(f"Error al guardar: {str(e)}")
+        
     def reset_states(self):
         """Restablece los estados al valor inicial."""
         self.upload_success = False
@@ -242,4 +407,9 @@ class TableStatePDF(rx.State):
         self.file_url = ""
         self.is_loading = False  # Restablecer el spinner
         self.show_uploader = True
+
+        self.uploaded_file_original = ""
+        self.file_url_original = ""
+        self.has_original = False
+        self.has_pdf = False
         print("Estados restablecidos.")

@@ -5,44 +5,58 @@ from ..backend.constans import disciplinas, clasificacion_entregable, tipo_entre
 def file_upload_PDF() -> rx.Component:
     # Componente memoizado para el visor PDF
     @rx.memo
-    def render_pdf_viewer():
-        return rx.cond(
-            TableStatePDF.uploaded_file,
-            TableStatePDF.pdf_component,
-            rx.text("No hay archivo cargado", color="#666")
+    def render_file_viewers():
+        return rx.vstack(
+            # Visor PDF
+            rx.cond(
+                TableStatePDF.uploaded_file,
+                TableStatePDF.pdf_component,
+                rx.text("No hay PDF cargado")
+            ),
+            rx.cond(
+                TableStatePDF.uploaded_file_original,
+                TableStatePDF.original_file_component, 
+                rx.text("No hay archivo original cargado")
+            ),
+            spacing="4"
         )
 
     return rx.box(
-        rx.heading("Subir PDF", size="3", margin_bottom="1rem", color="#e9004c"),
+        rx.heading("Subir Archivos (PDF y Original)", size="3", margin_bottom="1rem", color="#e9004c"),
         rx.vstack(
             rx.cond(
                 TableStatePDF.show_uploader,
                 rx.hstack(
                     rx.upload(
-                        rx.button("Seleccionar archivo", background_color="#374151", color="white"),
+                        rx.button("Seleccionar archivos", background_color="#374151", color="white"),
                         border="1px dashed #ccc",
                         padding="1rem",
                         border_radius="4px",
+                        multiple=True,
+                        max_files=2,
+                        accept={
+                            "application/pdf": [".pdf"],
+                            "application/*": [".*"]  # Acepta cualquier otro tipo de archivo
+                        }
                     ),
                     rx.button(
-                        "Subir archivo",
+                        "Subir archivos",
                         on_click=TableStatePDF.handle_upload(rx.upload_files()),
                         margin_top="1rem",
                         background_color="#e9004c",
                         color="white",
                     ),
-                    display = "flex",
-                    justify_content = "center",
-                    width = "100%",
+                    display="flex",
+                    justify_content="center",
+                    width="100%",
                     flex_direction=["column", "row"],
                 ),
             ),
-            # Visor PDF memoizado
-            render_pdf_viewer(),
+            render_file_viewers(),
             spacing="2",
         ),
         rx.cond(
-            TableStatePDF.extracted_data,
+            TableStatePDF.extracted_data | TableStatePDF.uploaded_file_original,
             rx.box(
                 rx.box(
                     rx.text(f"Detalles del Documento:", color="#1e252b", font_weight="bold"),
@@ -464,6 +478,65 @@ def file_upload_PDF() -> rx.Component:
                 ),
                 margin_top="1rem",
             ),
+        ),
+        # Alert Dialog para cuando ya existe ambos archivos
+        rx.alert_dialog.root(
+            rx.alert_dialog.content(
+                rx.alert_dialog.title("Entregable completo"),
+                rx.alert_dialog.description(
+                    "Este código de entregable ya tiene ambos archivos (PDF y original). "
+                    "No se pueden subir más archivos para este entregable."
+                ),
+                rx.flex(
+                    rx.alert_dialog.cancel(
+                        rx.button("Entendido", on_click=TableStatePDF.set_show_alert_entregables(False))
+                    ),
+                    spacing="3",
+                    margin_top="1rem",
+                ),
+            ),
+            open=TableStatePDF.show_alert_entregables,
+            on_open_change=TableStatePDF.set_show_alert_entregables,
+        ),
+
+        # Alert Dialog para cuando falta PDF pero se subió original
+        rx.alert_dialog.root(
+            rx.alert_dialog.content(
+                rx.alert_dialog.title("Falta archivo PDF"),
+                rx.alert_dialog.description(
+                    "Este entregable ya tiene un archivo original pero falta el PDF. "
+                    "Por favor suba el archivo PDF correspondiente."
+                ),
+                rx.flex(
+                    rx.alert_dialog.cancel(
+                        rx.button("Entendido", on_click=TableStatePDF.set_show_alert_missing_pdf(False))
+                    ),
+                    spacing="3",
+                    margin_top="1rem",
+                ),
+            ),
+            open=TableStatePDF.show_alert_missing_pdf,
+            on_open_change=TableStatePDF.set_show_alert_missing_pdf,
+        ),
+
+        # Alert Dialog para cuando falta original pero se subió PDF
+        rx.alert_dialog.root(
+            rx.alert_dialog.content(
+                rx.alert_dialog.title("Falta archivo original"),
+                rx.alert_dialog.description(
+                    "Este entregable ya tiene un archivo PDF pero falta el original. "
+                    "Por favor suba el archivo original correspondiente."
+                ),
+                rx.flex(
+                    rx.alert_dialog.cancel(
+                        rx.button("Entendido", on_click=TableStatePDF.set_show_alert_missing_original(False))
+                    ),
+                    spacing="3",
+                    margin_top="1rem",
+                ),
+            ),
+            open=TableStatePDF.show_alert_missing_original,
+            on_open_change=TableStatePDF.set_show_alert_missing_original,
         ),
         padding="1rem",
         width="100%",

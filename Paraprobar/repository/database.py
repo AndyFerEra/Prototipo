@@ -1,7 +1,8 @@
 from sqlmodel import create_engine, Session, select,SQLModel
 from sqlmodel import select, Session, func, or_, asc, desc
-from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables
+from ..models.excel_data import Reglas,Proyectos,Entregables
 from ..models.entregable_model import Entregable
+from supabase import create_client, Client
 from dotenv import load_dotenv
 import os
 
@@ -12,27 +13,32 @@ PASS_ENV = os.getenv("PASS_ENV")
 DATABASE_ENV = os.getenv("DATABASE_ENV")
 
 
+# Crear cliente de Supabase
+supabase: Client = create_client("https://arqzlruygpuwmyosqerh.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFycXpscnV5Z3B1d215b3NxZXJoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MzAxMDY2MywiZXhwIjoyMDU4NTg2NjYzfQ.j7uQFzd7tgQLJQLGLOuVGdyirGiCaVk1Jp4Phw0H2lY")
+
 # Construir la URL de conexión a la base de datos
 DATABASE_URL = f"mysql+mysqlconnector://{USER_ENV}:{PASS_ENV}@localhost/{DATABASE_ENV}"
 engine = create_engine(DATABASE_URL)
 
+# Inicializar la base de datos
 def init_db():
-    SQLModel.metadata.create_all(engine)
+    try:
+        SQLModel.metadata.create_all(engine)
+        print("Base de datos inicializada correctamente.")
+    except Exception as e:
+        print(f"Error al inicializar la base de datos: {e}")
 
+# Crear una sesión
 def get_session():
-    return Session(engine)
-
+    try:
+        return Session(engine)
+    except Exception as e:
+        print(f"Error al crear la sesión: {e}")
+        return None
 # Obtener todos los registros de la tabla "Entregable"
 def select_all_entregables():
     with Session(engine) as session:
         statement = select(Entregable)
-        results = session.exec(statement)
-        return results.all()
-    
-#prueba
-def select_all():
-    with Session(engine) as session:
-        statement = select(ExcelData)
         results = session.exec(statement)
         return results.all()
 
@@ -52,6 +58,45 @@ def select_all_proyectos():
 def select_all_entregables_2():
     with Session(engine) as session:
         statement = select(Entregables)
+        results = session.exec(statement)
+        return results.all()
+    
+def get_unique_codigo_proyectos():
+    """Obtiene una lista de códigos de proyecto únicos de la base de datos."""
+    with Session(engine) as session:
+        statement = select(Entregables.disciplina_entregables).distinct()  # Selecciona solo valores únicos
+        results = session.execute(statement)
+        return [row[0] for row in results]
+    
+
+def get_unique_values_by_column(column_name):
+    """Obtiene una lista de valores únicos de la base de datos filtrados por una columna específica."""
+    with Session(engine) as session:
+        statement = (
+            select(getattr(Entregables, column_name))
+            .distinct()  # Selecciona solo valores únicos
+        )
+        results = session.execute(statement)
+        return [row[0] for row in results]
+    
+def select_entregables_con_proyectos():
+    with Session(engine) as session:
+        statement = (
+            select(
+                Entregables.codigo_proyecto_entregables,
+                Entregables.disciplina_entregables,
+                Entregables.tipo_entregable_entre,
+                Entregables.codigo_entregable,
+                Entregables.nombre_entregable,
+                Entregables.total_hh,
+                Entregables.enlace_pdf,
+                Entregables.enlace_nativo,
+                Proyectos.orden_trabajo,
+                Proyectos.cliente,
+                Proyectos.nombre_proyecto,
+            )
+            .join(Proyectos, Proyectos.codigo_proyecto == Entregables.codigo_proyecto_entregables)
+        )
         results = session.exec(statement)
         return results.all()
     

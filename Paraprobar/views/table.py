@@ -1,60 +1,7 @@
 import reflex as rx
 
-from Paraprobar.models.excel_data import ExcelData
-from ..backend.table_state import Item, TableState
+from ..backend.table_state import TableState
 from ..components.status_badge import status_badge
-
-#trae la informacion de la tabla para poder mostrarlo en diferentes vista
-def _create_dialog(
-    item: Item, icon_name: str, color_scheme: str, dialog_title: str
-) -> rx.Component:
-    return rx.dialog.root(
-        rx.dialog.trigger(
-            rx.icon_button(
-                rx.icon(icon_name), color_scheme=color_scheme, size="2", variant="solid"
-            )
-        ),
-        rx.dialog.content(
-            rx.vstack(
-                rx.dialog.title(dialog_title),
-                rx.dialog.description(
-                    rx.vstack(
-                        rx.text(item.pipeline),
-                        rx.text(item.workflow),
-                        status_badge(item.status),
-                        rx.text(item.timestamp),
-                        rx.text(item.duration),
-                    )
-                ),
-                rx.dialog.close(
-                    rx.button("Close Dialog", size="2", color_scheme=color_scheme),
-                ),
-            ),
-        ),
-    )
-
-#para los botones falta la logica
-def _delete_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "trash-2", "tomato", "Delete Dialog")
-
-
-def _approve_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "check", "grass", "Approve Dialog")
-
-
-def _edit_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "square-pen", "blue", "Edit Dialog")
-
-#botones agrupados
-def _dialog_group(item: Item) -> rx.Component:
-    return rx.hstack(
-        _approve_dialog(item),
-        _edit_dialog(item),
-        _delete_dialog(item),
-        align="center",
-        spacing="2",
-        width="100%",
-    )
 
 #personalizacion del encabezado de tabla
 def _header_cell(text: str, icon: str) -> rx.Component:
@@ -65,19 +12,6 @@ def _header_cell(text: str, icon: str) -> rx.Component:
             align="center",
             spacing="2",
         ),
-    )
-
-def _show_item(item: ExcelData, index: int) -> rx.Component:
-    bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
-    hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
-
-    return rx.table.row(
-        rx.table.cell(item.id),
-        rx.table.cell(item.nombre),
-        rx.table.cell(item.edad),  # Convertimos edad a string
-        rx.table.cell(item.email),
-        style={"_hover": {"bg": hover_color}, "bg": bg_color},
-        align="center",
     )
 
 #sin decir pa la paginacion
@@ -283,7 +217,6 @@ def main_table() -> rx.Component:
             rx.table.body( 
                 rx.foreach(
                     TableState.get_current_page,
-                    lambda item, index: _show_item(item, index),
                 )
             ),
             variant="surface",
