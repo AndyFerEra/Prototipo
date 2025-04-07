@@ -52,37 +52,28 @@ class TableState(rx.State):
     
     @rx.var(cache=False)
     def unique_codigo_proyectos_cod_pry(self) -> list[str]:
-        """Retorna una lista de códigos de proyecto únicos."""
-        return list(get_unique_values_by_column("codigo_proyecto_entregables")) or []
+        valores = get_unique_values_by_column("codigo_proyecto_entregables") or []
+        return ["Ninguno"] + valores
     
     @rx.var(cache=False)
     def unique_codigo_proyectos_disciplina(self) -> list[str]:
-        """Retorna una lista de códigos de proyecto únicos."""
-        return list(get_unique_values_by_column("disciplina_entregables")) or []
+        valores = get_unique_values_by_column("disciplina_entregables") or []
+        return ["Ninguno"] + valores
     
     @rx.var(cache=False)
     def unique_codigo_proyectos_tip_entre(self) -> list[str]:
-        """Retorna una lista de códigos de proyecto únicos."""
-        return list(get_unique_values_by_column("clasificacion_entregable")) or []
-    
-    @rx.var(cache=False)
-    def unique_codigo_proyectos_cod_entregable(self) -> list[str]:
-        """Retorna una lista de códigos de proyecto únicos."""
-        return list(get_unique_values_by_column("tipo_entregable_entre")) or []
-    
-    @rx.var(cache=False)
-    def unique_codigo_proyectos_nomb_entre(self) -> list[str]:
-        """Retorna una lista de códigos de proyecto únicos."""
-        return list(get_unique_values_by_column("codigo_entregable")) or []
-    
+        valores = get_unique_values_by_column("tipo_entregable_entre") or []
+        return ["Ninguno"] + valores
+
     def set_filter(self, column: str, value: str):
         """Actualiza el filtro y aplica cambios en los datos."""
-        if value:  # Solo filtra si el valor no está vacío
+        if value == "Ninguno":
+            # Si el usuario selecciona "Ninguno", elimina el filtro para la columna especificada
+            self.filters.pop(column, None)
+        elif value:  # Solo filtra si el valor no está vacío
             self.filters[column] = value
         else:
             self.filters.pop(column, None)  # Elimina el filtro si está vacío
-        
-        #self.apply_filters()
 
     def apply_filters(self):
         """Filtra los elementos según los filtros seleccionados."""
@@ -171,7 +162,7 @@ class TableState(rx.State):
 
         # Filtrar si hay un valor de búsqueda
         if self.search_value_reglas:
-            search_value = self.search_value_reglas.lower()
+            search_value = self.search_value_reglas.strip().lower()
             items = [
                 item
                 for item in items
@@ -207,7 +198,7 @@ class TableState(rx.State):
 
         # Filtrar elementos basados en el valor de búsqueda
         if self.search_value_proyectos:
-            search_value = self.search_value_proyectos.lower()
+            search_value = self.search_value_proyectos.strip().lower()
             print(f"🔎 Buscando: {search_value}")
             items = [
                 item
@@ -246,7 +237,7 @@ class TableState(rx.State):
 
         # Filtrar elementos basados en el valor de búsqueda
         if self.search_value_entregables:
-            search_value = self.search_value_entregables.lower()
+            search_value = self.search_value_entregables.strip().lower()
             print(f"🔎 Buscando: {search_value}")
             data = [
                 item
