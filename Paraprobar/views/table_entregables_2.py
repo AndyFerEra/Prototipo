@@ -1,18 +1,34 @@
 import reflex as rx
 
-from Paraprobar.models.excel_data import Entregables
+from ..models.excel_data import Entregables,vistaentregablesproyectos
 from ..backend.table_state import TableState
-from ..components.status_badge import status_badge
-import time
+import os
+
+# Obtener el nombre de usuario de la PC
+USER_NAME = os.getlogin()
 
 #personalizacion del encabezado de tabla
-def _header_cell(text: str, icon: str) -> rx.Component:
+def _header_cell(text: str, icon: str = None, options: list[str] = None) -> rx.Component:
+    # Asegurar que options sea una lista (vacía si es None)
+    options = [] if options is None else options
+
+    children = [rx.icon(icon, size=18)] if icon else []
+    children.append(rx.text(text))
+
     return rx.table.column_header_cell(
         rx.hstack(
-            rx.icon(icon, size=18),
-            rx.text(text),
-            align="center",
-            spacing="2",
+            *children,
+            rx.cond(
+                options,  # Solo muestra el select si hay opciones
+                rx.select(
+                    options,  # Aquí options siempre será una lista válida
+                    on_change=lambda value: TableState.set_filter(text, value),
+                    width="0px 0px 10px 0px",
+                ),
+                rx.box()  # Si no hay opciones, coloca un elemento vacío
+            ),
+            align_items="center",
+            spacing="0",
         ),
     )
 
@@ -38,6 +54,8 @@ def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
     return rx.table.row(
         rx.table.cell(item.id),
         rx.table.cell(item.codigo_proyecto_entregables),
+        rx.table.cell(item.cliente),
+        rx.table.cell(item.nombre_proyecto),
         rx.table.cell(item.disciplina_entregables),
         rx.table.cell(item.tipo_entregable_entre),
         rx.table.cell(item.codigo_entregable),
@@ -201,40 +219,6 @@ def main_table_2() -> rx.Component:
         rx.flex(
             #ordenar mayor menor y busqueda 
             rx.flex(
-                #condicional para cambiar el orden de los iconos de ordenar la tabla 
-                rx.cond(
-                    TableState.sort_reverse_entregables,
-                    rx.icon(
-                        "arrow-down-z-a",
-                        size=28,
-                        stroke_width=1.5,
-                        cursor="pointer",
-                        flex_shrink="0",
-                        on_click=TableState.toggle_sort_entregables,
-                    ),
-                    rx.icon(
-                        "arrow-down-a-z",
-                        size=28,
-                        stroke_width=1.5,
-                        cursor="pointer",
-                        flex_shrink="0",
-                        on_click=TableState.toggle_sort_entregables,
-                    ),
-                ),
-                #combo box para ordenar la tabla
-                rx.select(
-                    [
-                        "pipeline",
-                        "status",
-                        "workflow",
-                        "timestamp",
-                        "duration",
-                    ],
-                    placeholder="Sort By: Pipeline",
-                    size="3",
-                    cursor="pointer",
-                    on_change=TableState.set_sort_value,
-                ),
                 #todo pa buscar
                 rx.input(
                     rx.input.slot(rx.icon("search")),
@@ -246,7 +230,7 @@ def main_table_2() -> rx.Component:
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
                     value=TableState.search_value_entregables,
-                    placeholder="Buscar...",
+                    placeholder="Buscar por entregables",
                     on_change=TableState.set_search_value_entregables,  # Actualizar al escribir
                     width="100%",
                 ),
@@ -282,15 +266,16 @@ def main_table_2() -> rx.Component:
         ),
         rx.table.root(
             rx.table.header(
-                #iconos y nombre del encabezado de tabla
                 rx.table.row(
                     _header_cell("ID", "hash"),
-                    _header_cell("Codigo Pry", "folder-git"),
-                    _header_cell("Disciplina", "list-collapse"),
-                    _header_cell("Tipo Entrgbl", "square-stack"),
-                    _header_cell("Codigo Entrgbl", "folder-code"),
-                    _header_cell("Nombre Entrgbl", "folder-pen"),
-                    _header_cell("HH Venta", "hourglass"),
+                    _header_cell("Cod Pry", options=TableState.unique_codigo_proyectos_cod_pry),
+                    _header_cell("Cliente"),
+                    _header_cell("Proyecto"),
+                    _header_cell("Disciplina",  options=TableState.unique_codigo_proyectos_disciplina),
+                    _header_cell("Tipo Entrgbl",  options=TableState.unique_codigo_proyectos_tip_entre),
+                    _header_cell("Codigo Entrgbl"),
+                    _header_cell("Nombre Entrgbl"),
+                    _header_cell("HH Venta"),
                     _header_cell("PDF", "file-text"),
                     _header_cell("Editable", "pencil-line"),
                 ),

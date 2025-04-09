@@ -3,10 +3,9 @@ from pathlib import Path
 from typing import List
 import pandas as pd
 import io
-from sqlmodel import Session
+from sqlmodel import Session, func, or_
 from ..repository.database import * 
-from ..models import ExcelData,Reglas,Proyectos,Entregables
-from ..models.entregable_model import Entregable
+from ..models import ExcelData,Reglas,Proyectos,Entregables,vistaentregablesproyectos
 import time
 import reflex as rx
 from elasticsearch import Elasticsearch
@@ -26,6 +25,7 @@ class Item(rx.Base):
 class TableState(rx.State):
     """La clase State."""
     items: List[ExcelData] = []
+    filtered_items: List[Entregables] = []
         
     search_value: str = ""
     search_value_reglas: str = ""
@@ -52,107 +52,70 @@ class TableState(rx.State):
 
     pdf_matches: dict = {}  # Almacenará coincidencias en PDFs por código de entregable
     
-    def search_in_elasticsearch(self, search_term: str):
-        """Busca en Elasticsearch y guarda resultados"""
-        with self:
-            self.pdf_matches = {}  # Limpiar resultados anteriores
-            
-            if not search_term:
-                return
-                
-            try:
-                query = {
-                    "query": {
-                        "match": {
-                            "texto": {
-                                "query": search_term,
-                                "operator": "and"
-                            }
-                        }
-                    },
-                    "_source": ["codigo_entregable", "pagina", "texto"],
-                    "size": 1000  # Aumentar si hay muchos resultados
-                }
-                
-                result = es.search(index="pdf_documents", body=query)
-                
-                for hit in result['hits']['hits']:
-                    codigo = hit['_source']['codigo_entregable']
-                    if codigo not in self.pdf_matches:
-                        self.pdf_matches[codigo] = []
-                    
-                    texto = hit['_source']['texto']
-                    term_lower = search_term.lower()
-                    texto_lower = texto.lower()
-                    inicio = texto_lower.find(term_lower)
-                    
-                    # Extraer fragmento de contexto
-                    fragmento = texto[max(0, inicio-50):min(len(texto), inicio+len(term_lower)+50)] if inicio != -1 else ""
-                    
-                    self.pdf_matches[codigo].append({
-                        "pagina": hit['_source']['pagina'],
-                        "fragmento": fragmento.strip() if fragmento else ""
-                    })
-                    
-            except Exception as e:
-                print(f"Error en búsqueda Elasticsearch: {e}")
+    filters: dict[str, str] = {}  # Diccionario para almacenar los filtros aplicados
+        
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_cod_pry(self) -> list[str]:
+        valores = get_unique_values_by_column("codigo_proyecto_entregables") or []
+        return ["Ninguno"] + valores
+    
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_disciplina(self) -> list[str]:
+        valores = get_unique_values_by_column("disciplina_entregables") or []
+        return ["Ninguno"] + valores
+    
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_tip_entre(self) -> list[str]:
+        valores = get_unique_values_by_column("tipo_entregable_entre") or []
+        return ["Ninguno"] + valores
 
-    def set_search_value_entregables(self, value: str):
-        """Actualiza el valor de búsqueda y realiza la búsqueda"""
-        self.search_value_entregables = value
-        self.offset = 0  # Resetear a la primera página
+    def set_filter(self, column: str, value: str):
+        """Actualiza el filtro y aplica cambios en los datos."""
+        if value == "Ninguno":
+            # Si el usuario selecciona "Ninguno", elimina el filtro para la columna especificada
+            self.filters.pop(column, None)
+        elif value:  # Solo filtra si el valor no está vacío
+            self.filters[column] = value
+        else:
+            self.filters.pop(column, None)  # Elimina el filtro si está vacío
+
+    def apply_filters(self):
+        """Filtra los elementos según los filtros seleccionados."""
+        if not self.filters:
+            self.filtered_items = self.items  # Si no hay filtros, muestra todos los datos
+            return
         
-        # Realizar búsqueda en Elasticsearch
-        self.search_in_elasticsearch(value)
-        
-        # Recargar los entregables
-        return self.load_entries_entregables()
+        self.filtered_items = [
+            item for item in self.items
+            if all(
+                str(getattr(item, col, "")).startswith(val)  # Convierte a str para evitar errores
+                for col, val in self.filters.items()
+            )
+        ]
+    
+    def apply_table_filters(self) -> None:
+        """Aplica los filtros de la tabla sin afectar la paginación."""
+        if not self.filters:
+            self.filtered_sorted_items_entregables = self.items  # Mostrar todo si no hay filtros
+            return
+
+        self.filtered_sorted_items_entregables = [
+            item for item in self.items
+            if all(
+                str(getattr(item, col, "")).lower().startswith(val.lower())  # 🔥 Filtra por coincidencias sin importar mayúsculas/minúsculas
+                for col, val in self.filters.items()
+            )
+        ]
+    
+    def refresh(self):
+        """Método para actualizar la tabla."""
+        self.dirty += 1  # Esto forzará un refresco de la tabla
     
     def reset_upload_state_entregables(self):
         """Restablece el estado de la subida de archivo y redirige."""
         self.upload_success = False
         self.uploaded_file_name = ""
         return rx.redirect("/") 
-
-    #Para las busquedas y ordenamiento
-    def set_search_value_entregables(self, value: str):
-        """Actualiza el valor de búsqueda y recarga los datos"""
-        self.search_value_entregables = value
-        self.offset = 0  # Resetear a la primera página
-        return self.load_entries_entregables()
-
-    @rx.var(cache=True)
-    def filtered_sorted_items(self) -> List[Item]:
-        
-        items = self.items
-
-        # Filtrar elementos basados en el valor de ordenación seleccionado
-        if self.sort_value:
-            items = sorted(
-                items,
-                key=lambda item: str(getattr(item, self.sort_value)).lower(),
-                reverse=self.sort_reverse,
-            )
-
-        # Filtrar elementos basados en el valor de búsqueda
-        if self.search_value:
-            search_value = self.search_value.lower()
-            items = [
-                item
-                for item in items
-                if any(
-                    search_value in str(getattr(item, attr)).lower()
-                    for attr in [
-                        "pipeline",
-                        "status",
-                        "workflow",
-                        "timestamp",
-                        "duration",
-                    ]
-                )
-            ]
-
-        return items
 
     #Para las busquedas y ordenamiento para arreglar
     @rx.var(cache=True)
@@ -169,7 +132,7 @@ class TableState(rx.State):
 
         # Filtrar si hay un valor de búsqueda
         if self.search_value_reglas:
-            search_value = self.search_value_reglas.lower()
+            search_value = self.search_value_reglas.strip().lower()
             items = [
                 item
                 for item in items
@@ -181,6 +144,8 @@ class TableState(rx.State):
                         "sector", #Sector
                         "etapa_ingenieria",  # ETp Ing
                         "estado", #Estado
+                        "codigo_ted", #Cod TED
+                        "ted", #TED
                     ]
                 )
             ]
@@ -203,7 +168,8 @@ class TableState(rx.State):
 
         # Filtrar elementos basados en el valor de búsqueda
         if self.search_value_proyectos:
-            search_value = self.search_value_proyectos.lower()
+            search_value = self.search_value_proyectos.strip().lower()
+            print(f"🔎 Buscando: {search_value}")
             items = [
                 item
                 for item in items
@@ -221,38 +187,52 @@ class TableState(rx.State):
 
         return items
 
-    @rx.var(cache=True)
-    def filtered_sorted_items_entregables(self) -> List[Entregables]:
-        
-        items = self.items 
+    @rx.var(cache=False, initial_value=[])
+    def filtered_sorted_items_entregables(self) -> list[vistaentregablesproyectos]:
+        """Aplica filtros, búsqueda y ordenación antes de paginar los datos."""
+        data = lafeeeeeeeeeeeee()  # Asegúrate de que esta función trae todos los datos
 
-        # Filtrar elementos basados en el valor de ordenación seleccionado
-        if self.sort_value_entregables:
-            items = sorted(
-                items,
-                key=lambda item: str(getattr(item, self.sort_value_entregables)).lower(),
-                reverse=self.sort_reverse_entregables,
-            )
+        # Aplicar los filtros combo box
+        for column, value in self.filters.items():
+            if column == "Cod Pry":
+                data = [item for item in data if item.codigo_proyecto_entregables == value]
+            elif column == "Disciplina":
+                data = [item for item in data if item.disciplina_entregables == value]
+            elif column == "Tipo Entrgbl":
+                data = [item for item in data if item.tipo_entregable_entre == value]
+            elif column == "Codigo Entrgbl":
+                data = [item for item in data if item.codigo_entregable == value]
+            elif column == "Nombre Entrgbl":
+                data = [item for item in data if item.nombre_entregable == value]
 
         # Filtrar elementos basados en el valor de búsqueda
         if self.search_value_entregables:
-            search_value = self.search_value_entregables.lower()
-            items = [
+            search_value = self.search_value_entregables.strip().lower()
+            print(f"🔎 Buscando: {search_value}")
+            data = [
                 item
-                for item in items
+                for item in data
                 if any(
                     search_value in str(getattr(item, attr)).lower()
                     for attr in [
-                        "nombre_entregable", #Nombre Entrgbl
-                        "codigo_entregable", #Codigo Entrgbl
-                        "codigo_proyecto_entregables",#Codigo Pry
-                        "disciplina_entregables", #Disciplina
-                        "tipo_entregable_entre", #Tipo Entrgbl
+                        "codigo_proyecto_entregables", # Codigo Pry
+                        "disciplina_entregables", # Disciplina
+                        "tipo_entregable_entre", # Tipo Entrgbl
+                        "codigo_entregable", # Codigo Entrgbl
+                        "nombre_entregable", # Nombre Entrgbl
                     ]
                 )
             ]
 
-        return items
+        # Ordenar elementos basados en el valor de ordenación seleccionado
+        if self.sort_value_entregables:
+            data = sorted(
+                data,
+                key=lambda item: str(getattr(item, self.sort_value_entregables)).lower(),
+                reverse=self.sort_reverse_entregables,
+            )
+
+        return data
 
     @rx.var(cache=True)
     def page_number(self) -> int:
@@ -263,13 +243,6 @@ class TableState(rx.State):
         return (self.total_items // self.limit) + (
             1 if self.total_items % self.limit else 0
         )
-
-    #tabla prueba
-    @rx.var(cache=True, initial_value=[])
-    def get_current_page(self) -> list[ExcelData]:
-        start_index = self.offset
-        end_index = start_index + self.limit
-        return self.filtered_sorted_items[start_index:end_index]
     
     #tabla reglas falta ver bien del todo 
     @rx.var(cache=True, initial_value=[])
@@ -277,7 +250,7 @@ class TableState(rx.State):
         start_index = self.offset
         end_index = start_index + self.limit
         return self.filtered_sorted_items_reglas[start_index:end_index]
-    
+        
     #tabla proyectos falta ver bien del todo 
     @rx.var(cache=True, initial_value=[])
     def get_current_page_proyectos(self) -> list[Proyectos]:
@@ -287,7 +260,7 @@ class TableState(rx.State):
 
     #tabla entregables falta ver bien del todo 
     @rx.var(cache=True, initial_value=[])
-    def get_current_page_entregables(self) -> list[Entregables]:
+    def get_current_page_entregables(self) -> list[vistaentregablesproyectos]:
         start_index = self.offset
         end_index = start_index + self.limit
         return self.filtered_sorted_items_entregables[start_index:end_index]
@@ -576,24 +549,28 @@ class TableState(rx.State):
         try:
             with Session(engine) as session:
                 # Consulta base
-                query = select(Entregables)
+                query = select(vistaentregablesproyectos)
                 
                 # Si hay búsqueda y coincidencias en PDF, priorizar esos entregables
                 if self.search_value_entregables and self.pdf_matches:
                     codigos_con_coincidencias = list(self.pdf_matches.keys())
-                    query = query.where(Entregables.codigo_entregable.in_(codigos_con_coincidencias))
+                    query = query.where(vistaentregablesproyectos.codigo_entregable.in_(codigos_con_coincidencias))
                 
                 # Aplicar filtro de búsqueda en columnas
                 if self.search_value_entregables:
                     search = f"%{self.search_value_entregables.lower()}%"
                     query = query.where(
                         or_(
-                            Entregables.nombre_entregable.ilike(search),
-                            Entregables.codigo_entregable.ilike(search),
-                            Entregables.clasificacion_entregable.ilike(search),
-                            Entregables.codigo_proyecto_entregables.ilike(search),
-                            Entregables.disciplina_entregables.ilike(search),
-                            Entregables.tipo_entregable_entre.ilike(search)
+                            vistaentregablesproyectos.codigo_proyecto_entregables.ilike(search),
+                            vistaentregablesproyectos.cliente.ilike(search),
+                            vistaentregablesproyectos.nombre_proyecto.ilike(search),
+                            vistaentregablesproyectos.disciplina_entregables.ilike(search),
+                            vistaentregablesproyectos.tipo_entregable_entre.ilike(search),
+                            vistaentregablesproyectos.codigo_entregable.ilike(search),
+                            vistaentregablesproyectos.nombre_entregable.ilike(search),
+                            vistaentregablesproyectos.total_hh.ilike(search),
+                            vistaentregablesproyectos.enlace_pdf.ilike(search),
+                            vistaentregablesproyectos.enlace_nativo.ilike(search),
                         )
                     )
                 
@@ -602,33 +579,16 @@ class TableState(rx.State):
                     select(func.count()).select_from(query.subquery())
                 ).one()
                 
-                # Aplicar ordenamiento (SIEMPRE necesitamos un ORDER BY para paginación en SQL Server)
-                if not self.sort_value_entregables:
-                    # Si no hay criterio de ordenamiento, usamos uno por defecto (puede ser el ID o cualquier campo)
-                    self.sort_value_entregables = "id"  # Asegúrate que este campo exista en tu modelo
-                    self.sort_reverse_entregables = False
-                
-                field = getattr(Entregables, self.sort_value_entregables)
-                direction = desc if self.sort_reverse_entregables else asc
-                query = query.order_by(direction(field))
-                
                 # Aplicar paginación
                 query = query.offset(self.offset).limit(self.limit)
                 self.items = session.exec(query).all()
                 
         except Exception as e:
-            print(f"Error al cargar entregables: {e}")
+            #print(f"Error al cargar entregables: {e}")
             self.items = []
-            self.total_items = 0
+            self.total_items = 0    
 
-    @rx.var
-    def get_current_page_entregables(self) -> list[Entregables]:
-        """Versión optimizada con caché"""
-        return self.items
-
-    def toggle_sort_entregables(self):
-        self.sort_reverse_entregables = not self.sort_reverse_entregables
-        self.load_entries_entregables()
+    
 
     def handle_upload_entregables(self, files: list):
         try:

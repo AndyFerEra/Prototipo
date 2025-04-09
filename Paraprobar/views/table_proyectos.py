@@ -1,6 +1,6 @@
 import reflex as rx
 
-from Paraprobar.models.excel_data import Proyectos
+from ..models.excel_data import Proyectos
 from ..backend.table_state import TableState
 from ..components.status_badge import status_badge
 
@@ -180,33 +180,20 @@ def main_table() -> rx.Component:
                         on_click=TableState.toggle_sort_proyectos,
                     ),
                 ),
-                #combo box para ordenar la tabla
-                rx.select(
-                    [
-                        "pipeline",
-                        "status",
-                        "workflow",
-                        "timestamp",
-                        "duration",
-                    ],
-                    placeholder="Sort By: Pipeline",
-                    size="3",
-                    on_change=TableState.set_sort_value,
-                ),
                 #todo pa buscar
                 rx.input(
                     rx.input.slot(rx.icon("search")),
                     rx.input.slot(
-                        rx.icon("x"),
+                        rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=TableState.setvar("search_value", ""),
+                        on_click=TableState.setvar("search_value_proyectos", ""),
                         display=rx.cond(TableState.search_value_proyectos, "flex", "none"),
                     ),
                     value=TableState.search_value_proyectos,
                     placeholder="Search by the first 5 columns",
                     size="3",
-                    max_width=["400px", "450px", "500px", "550px"],  # Increased max_width values
+                    max_width=["450px", "500px", "550px", "600px"],  # Increased max_width values
                     width="100%",
                     variant="surface",
                     color_scheme="gray",
