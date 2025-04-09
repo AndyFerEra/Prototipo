@@ -4,57 +4,6 @@ from Paraprobar.models.excel_data import Proyectos
 from ..backend.table_state import Item, TableState
 from ..components.status_badge import status_badge
 
-#trae la informacion de la tabla para poder mostrarlo en diferentes vista
-def _create_dialog(
-    item: Item, icon_name: str, color_scheme: str, dialog_title: str
-) -> rx.Component:
-    return rx.dialog.root(
-        rx.dialog.trigger(
-            rx.icon_button(
-                rx.icon(icon_name), color_scheme=color_scheme, size="2", variant="solid"
-            )
-        ),
-        rx.dialog.content(
-            rx.vstack(
-                rx.dialog.title(dialog_title),
-                rx.dialog.description(
-                    rx.vstack(
-                        rx.text(item.pipeline),
-                        rx.text(item.workflow),
-                        status_badge(item.status),
-                        rx.text(item.timestamp),
-                        rx.text(item.duration),
-                    )
-                ),
-                rx.dialog.close(
-                    rx.button("Close Dialog", size="2", color_scheme=color_scheme),
-                ),
-            ),
-        ),
-    )
-
-#para los botones falta la logica
-def _delete_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "trash-2", "tomato", "Delete Dialog")
-
-
-def _approve_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "check", "grass", "Approve Dialog")
-
-
-def _edit_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "square-pen", "blue", "Edit Dialog")
-
-#botones agrupados
-def _dialog_group(item: Item) -> rx.Component:
-    return rx.hstack(
-        _approve_dialog(item),
-        _edit_dialog(item),
-        _delete_dialog(item),
-        align="center",
-        spacing="2",
-        width="100%",
-    )
 
 #personalizacion del encabezado de tabla
 def _header_cell(text: str, icon: str) -> rx.Component:
@@ -232,19 +181,6 @@ def main_table() -> rx.Component:
                         on_click=TableState.toggle_sort_proyectos,
                     ),
                 ),
-                #combo box para ordenar la tabla
-                rx.select(
-                    [
-                        "pipeline",
-                        "status",
-                        "workflow",
-                        "timestamp",
-                        "duration",
-                    ],
-                    placeholder="Sort By: Pipeline",
-                    size="3",
-                    on_change=TableState.set_sort_value,
-                ),
                 #todo pa buscar
                 rx.input(
                     rx.input.slot(rx.icon("search")),
@@ -258,7 +194,7 @@ def main_table() -> rx.Component:
                     value=TableState.search_value_proyectos,
                     placeholder="Search by the first 5 columns",
                     size="3",
-                    max_width=["400px", "450px", "500px", "550px"],  # Increased max_width values
+                    max_width=["450px", "500px", "550px", "600px"],  # Increased max_width values
                     width="100%",
                     variant="surface",
                     color_scheme="gray",

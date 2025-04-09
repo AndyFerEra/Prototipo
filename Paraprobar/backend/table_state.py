@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import List
 import pandas as pd
 import io
-from sqlmodel import Session
+from sqlmodel import Session, func, or_
 from ..repository.database import * 
 from ..models import ExcelData,Reglas,Proyectos,Entregables,vistaentregablesproyectos
 import time
@@ -21,7 +21,6 @@ class Item(rx.Base):
 class TableState(rx.State):
     """La clase State."""
 
-    loading_progress: int = 0
     items: List[ExcelData] = []
     filtered_items: List[Entregables] = []
         
@@ -189,7 +188,7 @@ class TableState(rx.State):
 
         # Aplicar los filtros combo box
         for column, value in self.filters.items():
-            if column == "Codigo Pry":
+            if column == "Cod Pry":
                 data = [item for item in data if item.codigo_proyecto_entregables == value]
             elif column == "Disciplina":
                 data = [item for item in data if item.disciplina_entregables == value]
@@ -525,73 +524,50 @@ class TableState(rx.State):
             
 #cargar datos de bd de entregables
     def load_entries_entregables(self):
-        """Carga los datos y actualiza la barra de progreso dinámicamente."""
+        """Carga optimizada con paginación directa en SQL"""
         try:
-            self.loading_progress = 10  # Inicia la barra de carga
-            yield  # 🔄 Actualiza la interfaz
-
-            start_time = time.time()
-
-            datos_db = lafeeeeeeeeeeeee()  # Cargar datos de la BD
-            db_time = time.time()
-            self.loading_progress = 50  # A mitad del proceso
-            yield  # 🔄 Actualiza la interfaz
-
-            # Procesar datos
-            self.loading_progress = 65  # Procesando datos
-            yield  
-
-            self.items = [
-                vistaentregablesproyectos(
-                    id=item.id,
-                    codigo_proyecto_entregables=item.codigo_proyecto_entregables,
-                    cliente=item.cliente,
-                    nombre_proyecto=item.nombre_proyecto,
-                    disciplina_entregables=item.disciplina_entregables,
-                    tipo_entregable_entre=item.tipo_entregable_entre,
-                    codigo_entregable=item.codigo_entregable,
-                    nombre_entregable=item.nombre_entregable,
-                    total_hh=item.total_hh,
-                    enlace_pdf=item.enlace_pdf,
-                    enlace_nativo=item.enlace_nativo,
-                )
-                for item in datos_db
-            ]
-            
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_entregables)
-            self.loading_progress = 80  # Datos casi listos
-            yield  
-
-            process_time = time.time()
-            self.total_items = len(self.items)
-
-            self.loading_progress = 90  # Preparando para mostrar
-            yield  
-
-            print(f"✅ Se cargaron {self.total_items} datos de entregables.")
-            print(f"⏱ BD/Caché: {db_time - start_time:.4f} s")
-            print(f"⏳ Procesamiento: {process_time - db_time:.4f} s")
-            print(f"🚀 Total: {process_time - start_time:.4f} s")
-
-            # Simulación de espera para UX
-            time.sleep(0.5)
-
-            self.loading_progress = 90  # Carga completada
-            yield  
-
-            time.sleep(5)
-            self.loading_progress = 0  # Ocultar barra
-            yield  
-            
+            with Session(engine) as session:
+                # Consulta base
+                query = select(vistaentregablesproyectos)
+                
+                # Si hay búsqueda y coincidencias en PDF, priorizar esos entregables
+                if self.search_value_entregables and self.pdf_matches:
+                    codigos_con_coincidencias = list(self.pdf_matches.keys())
+                    query = query.where(vistaentregablesproyectos.codigo_entregable.in_(codigos_con_coincidencias))
+                
+                # Aplicar filtro de búsqueda en columnas
+                if self.search_value_entregables:
+                    search = f"%{self.search_value_entregables.lower()}%"
+                    query = query.where(
+                        or_(
+                            vistaentregablesproyectos.codigo_proyecto_entregables.ilike(search),
+                            vistaentregablesproyectos.cliente.ilike(search),
+                            vistaentregablesproyectos.nombre_proyecto.ilike(search),
+                            vistaentregablesproyectos.disciplina_entregables.ilike(search),
+                            vistaentregablesproyectos.tipo_entregable_entre.ilike(search),
+                            vistaentregablesproyectos.codigo_entregable.ilike(search),
+                            vistaentregablesproyectos.nombre_entregable.ilike(search),
+                            vistaentregablesproyectos.total_hh.ilike(search),
+                            vistaentregablesproyectos.enlace_pdf.ilike(search),
+                            vistaentregablesproyectos.enlace_nativo.ilike(search),
+                        )
+                    )
+                
+                # Contar total de registros
+                self.total_items = session.exec(
+                    select(func.count()).select_from(query.subquery())
+                ).one()
+                
+                # Aplicar paginación
+                query = query.offset(self.offset).limit(self.limit)
+                self.items = session.exec(query).all()
+                
         except Exception as e:
-            print(f"❌ Error al cargar los datos de la base de datos: {e}")
-            self.loading_progress = 0  # Reset en caso de error
-            yield  # 🔄 Asegura que se oculta la barra    
+            #print(f"Error al cargar entregables: {e}")
+            self.items = []
+            self.total_items = 0    
 
-    def start_loading(self):
-            """Inicia la barra de carga antes de que la vista cargue los datos."""
-            self.loading_progress = 1
-            yield
+    
 
     def handle_upload_entregables(self, files: list):
         try:

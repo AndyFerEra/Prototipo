@@ -8,11 +8,12 @@ import os
 USER_NAME = os.getlogin()
 
 #personalizacion del encabezado de tabla
-def _header_cell(text: str, icon: str, options: list[str] = None) -> rx.Component:
+def _header_cell(text: str, icon: str = None, options: list[str] = None) -> rx.Component:
     # Asegurar que options sea una lista (vacía si es None)
     options = [] if options is None else options
 
-    children = [rx.icon(icon, size=18), rx.text(text)]
+    children = [rx.icon(icon, size=18)] if icon else []
+    children.append(rx.text(text))
 
     return rx.table.column_header_cell(
         rx.hstack(
@@ -223,7 +224,7 @@ def main_table_2() -> rx.Component:
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
                     value=TableState.search_value_entregables,
-                    placeholder="Buscar...",
+                    placeholder="Buscar por entregables",
                     on_change=TableState.set_search_value_entregables,  # Actualizar al escribir
                     width="100%",
                 ),
@@ -261,14 +262,14 @@ def main_table_2() -> rx.Component:
             rx.table.header(
                 rx.table.row(
                     _header_cell("ID", "hash"),
-                    _header_cell("Codigo Pry", "folder-git", options=TableState.unique_codigo_proyectos_cod_pry),
-                    _header_cell("Cliente", "circle-user-round"),
-                    _header_cell("Proyecto", "folder-kanban"),
-                    _header_cell("Disciplina", "list-collapse", options=TableState.unique_codigo_proyectos_disciplina),
-                    _header_cell("Tipo Entrgbl", "square-stack", options=TableState.unique_codigo_proyectos_tip_entre),
-                    _header_cell("Codigo Entrgbl", "folder-code"),
-                    _header_cell("Nombre Entrgbl", "folder-pen"),
-                    _header_cell("HH Venta", "hourglass"),
+                    _header_cell("Cod Pry", options=TableState.unique_codigo_proyectos_cod_pry),
+                    _header_cell("Cliente"),
+                    _header_cell("Proyecto"),
+                    _header_cell("Disciplina",  options=TableState.unique_codigo_proyectos_disciplina),
+                    _header_cell("Tipo Entrgbl",  options=TableState.unique_codigo_proyectos_tip_entre),
+                    _header_cell("Codigo Entrgbl"),
+                    _header_cell("Nombre Entrgbl"),
+                    _header_cell("HH Venta"),
                     _header_cell("PDF", "file-text"),
                     _header_cell("Editable", "pencil-line"),
                 ),

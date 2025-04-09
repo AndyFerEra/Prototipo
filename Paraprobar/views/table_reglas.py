@@ -4,57 +4,6 @@ from ..models.excel_data import Reglas,ExcelData
 from ..backend.table_state import Item, TableState
 from ..components.status_badge import status_badge
 
-#trae la informacion de la tabla para poder mostrarlo en diferentes vista
-def _create_dialog(
-    item: Item, icon_name: str, color_scheme: str, dialog_title: str
-) -> rx.Component:
-    return rx.dialog.root(
-        rx.dialog.trigger(
-            rx.icon_button(
-                rx.icon(icon_name), color_scheme=color_scheme, size="2", variant="solid"
-            )
-        ),
-        rx.dialog.content(
-            rx.vstack(
-                rx.dialog.title(dialog_title),
-                rx.dialog.description(
-                    rx.vstack(
-                        rx.text(item.pipeline),
-                        rx.text(item.workflow),
-                        status_badge(item.status),
-                        rx.text(item.timestamp),
-                        rx.text(item.duration),
-                    )
-                ),
-                rx.dialog.close(
-                    rx.button("Close Dialog", size="2", color_scheme=color_scheme),
-                ),
-            ),
-        ),
-    )
-
-#para los botones falta la logica
-def _delete_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "trash-2", "tomato", "Delete Dialog")
-
-
-def _approve_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "check", "grass", "Approve Dialog")
-
-
-def _edit_dialog(item: Item) -> rx.Component:
-    return _create_dialog(item, "square-pen", "blue", "Edit Dialog")
-
-#botones agrupados
-def _dialog_group(item: Item) -> rx.Component:
-    return rx.hstack(
-        _approve_dialog(item),
-        _edit_dialog(item),
-        _delete_dialog(item),
-        align="center",
-        spacing="2",
-        width="100%",
-    )
 
 #personalizacion del encabezado de tabla
 def _header_cell(text: str, icon: str) -> rx.Component:
@@ -99,10 +48,6 @@ def _show_buttons_row() -> rx.Component:
         style={"bg": rx.color("gray", 2)},
         align="center",
     )
-
-
-
-
 
 #sin decir pa la paginacion
 def _pagination_view() -> rx.Component:
