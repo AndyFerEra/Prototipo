@@ -5,8 +5,7 @@ import pandas as pd
 import io
 from sqlmodel import Session
 from ..repository.database import * 
-from ..models import ExcelData,Reglas,Proyectos,Entregables
-from ..models.entregable_model import Entregable
+from ..models import ExcelData,Reglas,Proyectos,Entregables,vistaentregablesproyectos
 import time
 import reflex as rx
 
@@ -49,7 +48,7 @@ class TableState(rx.State):
     upload_success: bool = False
     error_message: str = ""
     filters: dict[str, str] = {}  # Diccionario para almacenar los filtros aplicados
-    
+        
     @rx.var(cache=False)
     def unique_codigo_proyectos_cod_pry(self) -> list[str]:
         valores = get_unique_values_by_column("codigo_proyecto_entregables") or []
@@ -98,7 +97,7 @@ class TableState(rx.State):
         self.filtered_sorted_items_entregables = [
             item for item in self.items
             if all(
-                str(getattr(item, col, "")).startswith(val)  # 🔥 Filtra por coincidencias
+                str(getattr(item, col, "")).lower().startswith(val.lower())  # 🔥 Filtra por coincidencias sin importar mayúsculas/minúsculas
                 for col, val in self.filters.items()
             )
         ]
@@ -112,40 +111,6 @@ class TableState(rx.State):
         self.upload_success = False
         self.uploaded_file_name = ""
         return rx.redirect("/") 
-
-    #Para las busquedas y ordenamiento
-    @rx.var(cache=True)
-    def filtered_sorted_items(self) -> List[Item]:
-        
-        items = self.items
-
-        # Filtrar elementos basados en el valor de ordenación seleccionado
-        if self.sort_value:
-            items = sorted(
-                items,
-                key=lambda item: str(getattr(item, self.sort_value)).lower(),
-                reverse=self.sort_reverse,
-            )
-
-        # Filtrar elementos basados en el valor de búsqueda
-        if self.search_value:
-            search_value = self.search_value.lower()
-            items = [
-                item
-                for item in items
-                if any(
-                    search_value in str(getattr(item, attr)).lower()
-                    for attr in [
-                        "pipeline",
-                        "status",
-                        "workflow",
-                        "timestamp",
-                        "duration",
-                    ]
-                )
-            ]
-
-        return items
 
     #Para las busquedas y ordenamiento para arreglar
     @rx.var(cache=True)
@@ -218,9 +183,9 @@ class TableState(rx.State):
         return items
 
     @rx.var(cache=False, initial_value=[])
-    def filtered_sorted_items_entregables(self) -> list[Entregables]:
+    def filtered_sorted_items_entregables(self) -> list[vistaentregablesproyectos]:
         """Aplica filtros, búsqueda y ordenación antes de paginar los datos."""
-        data = select_all_entregables_2()  # Asegúrate de que esta función trae todos los datos
+        data = lafeeeeeeeeeeeee()  # Asegúrate de que esta función trae todos los datos
 
         # Aplicar los filtros combo box
         for column, value in self.filters.items():
@@ -273,13 +238,6 @@ class TableState(rx.State):
         return (self.total_items // self.limit) + (
             1 if self.total_items % self.limit else 0
         )
-
-    #tabla prueba
-    @rx.var(cache=True, initial_value=[])
-    def get_current_page(self) -> list[ExcelData]:
-        start_index = self.offset
-        end_index = start_index + self.limit
-        return self.filtered_sorted_items[start_index:end_index]
     
     #tabla reglas falta ver bien del todo 
     @rx.var(cache=True, initial_value=[])
@@ -297,7 +255,7 @@ class TableState(rx.State):
 
     #tabla entregables falta ver bien del todo 
     @rx.var(cache=True, initial_value=[])
-    def get_current_page_entregables(self) -> list[Entregables]:
+    def get_current_page_entregables(self) -> list[vistaentregablesproyectos]:
         start_index = self.offset
         end_index = start_index + self.limit
         return self.filtered_sorted_items_entregables[start_index:end_index]
@@ -315,34 +273,6 @@ class TableState(rx.State):
 
     def last_page(self):
         self.offset = (self.total_pages - 1) * self.limit
-            
-    #para la lectura y subida de datos        
-            
-    #cargar datos de bd de prueba
-    def load_entries(self):
-        try:
-            datos_db = select_all()  # Obtiene los datos desde la base de datos
-            print(f"Datos obtenidos: {datos_db}")  # Debugging
-
-            self.items = [
-                ExcelData(
-                    id=item.id,
-                    nombre=item.nombre,
-                    edad=item.edad,
-                    email=item.email,
-                )
-                for item in datos_db
-            ]
-
-            self.total_items = len(self.items)
-            print(f"Se cargaron {self.total_items} registros desde la base de datos.")
-
-        except Exception as e:
-            print(f"Error al cargar los datos de la base de datos: {e}")        
-            
-    def toggle_sort(self):
-        self.sort_reverse = not self.sort_reverse
-        self.load_entries()
 
     def handle_upload(self, files: list):
         # Maneja la subida de archivos.
@@ -602,7 +532,7 @@ class TableState(rx.State):
 
             start_time = time.time()
 
-            datos_db = select_all_entregables_2()  # Cargar datos de la BD
+            datos_db = lafeeeeeeeeeeeee()  # Cargar datos de la BD
             db_time = time.time()
             self.loading_progress = 50  # A mitad del proceso
             yield  # 🔄 Actualiza la interfaz
@@ -612,11 +542,12 @@ class TableState(rx.State):
             yield  
 
             self.items = [
-                Entregables(
+                vistaentregablesproyectos(
                     id=item.id,
                     codigo_proyecto_entregables=item.codigo_proyecto_entregables,
+                    cliente=item.cliente,
+                    nombre_proyecto=item.nombre_proyecto,
                     disciplina_entregables=item.disciplina_entregables,
-                    clasificacion_entregable=item.clasificacion_entregable,
                     tipo_entregable_entre=item.tipo_entregable_entre,
                     codigo_entregable=item.codigo_entregable,
                     nombre_entregable=item.nombre_entregable,
@@ -661,10 +592,6 @@ class TableState(rx.State):
             """Inicia la barra de carga antes de que la vista cargue los datos."""
             self.loading_progress = 1
             yield
-
-    def toggle_sort_entregables(self):
-        self.sort_reverse_entregables = not self.sort_reverse_entregables
-        self.load_entries_entregables()
 
     def handle_upload_entregables(self, files: list):
         try:

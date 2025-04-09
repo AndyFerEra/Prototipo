@@ -33,7 +33,6 @@ def menu_item(text: str, url: str) -> rx.Component:
                 ("Proyectos", menu_item_icon("folders")),
                 ("Reglas", menu_item_icon("scale")),
                 ("Agregar PDF", menu_item_icon("file-text")),
-                ("Entregables_River", menu_item_icon("list-check")),
                 menu_item_icon("layout-dashboard"),
             ),
             rx.text(text, size="4", weight="regular"),

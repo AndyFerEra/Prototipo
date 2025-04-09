@@ -72,3 +72,18 @@ class Entregables(SQLModel, table=True):
     total_hh: Optional[int] = None
     enlace_pdf: str
     enlace_nativo: str
+    
+class vistaentregablesproyectos(SQLModel, table=True):
+    __tablename__ = "vista_entregables_proyectos"
+
+    id: Optional[int] = Field(default=None, primary_key=True)
+    codigo_proyecto_entregables: str
+    disciplina_entregables: str
+    tipo_entregable_entre: str
+    codigo_entregable: str
+    nombre_entregable: str
+    total_hh: Optional[int]
+    enlace_pdf: str
+    enlace_nativo: str
+    cliente: str
+    nombre_proyecto: str

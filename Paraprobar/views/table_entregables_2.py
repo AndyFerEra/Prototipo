@@ -1,9 +1,7 @@
 import reflex as rx
 
-from Paraprobar.models.excel_data import Entregables
+from Paraprobar.models.excel_data import Entregables,vistaentregablesproyectos
 from ..backend.table_state import TableState
-from ..components.status_badge import status_badge
-import time
 import os
 
 # Obtener el nombre de usuario de la PC
@@ -34,7 +32,7 @@ def _header_cell(text: str, icon: str, options: list[str] = None) -> rx.Componen
     )
 
 
-def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
+def _show_item_entregables(item: vistaentregablesproyectos, index: int) -> rx.Component:
     # Función segura para generar URLs
     def safe_path(path):
         return rx.cond(
@@ -49,6 +47,8 @@ def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
     return rx.table.row(
         rx.table.cell(item.id),
         rx.table.cell(item.codigo_proyecto_entregables),
+        rx.table.cell(item.cliente),
+        rx.table.cell(item.nombre_proyecto),
         rx.table.cell(item.disciplina_entregables),
         rx.table.cell(item.tipo_entregable_entre),
         rx.table.cell(item.codigo_entregable),
@@ -262,6 +262,8 @@ def main_table_2() -> rx.Component:
                 rx.table.row(
                     _header_cell("ID", "hash"),
                     _header_cell("Codigo Pry", "folder-git", options=TableState.unique_codigo_proyectos_cod_pry),
+                    _header_cell("Cliente", "circle-user-round"),
+                    _header_cell("Proyecto", "folder-kanban"),
                     _header_cell("Disciplina", "list-collapse", options=TableState.unique_codigo_proyectos_disciplina),
                     _header_cell("Tipo Entrgbl", "square-stack", options=TableState.unique_codigo_proyectos_tip_entre),
                     _header_cell("Codigo Entrgbl", "folder-code"),

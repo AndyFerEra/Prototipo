@@ -4,7 +4,7 @@ from .pdf_processor import process_pdf
 from ultralytics import YOLO
 from typing import List
 from ..repository.database import get_session
-from ..models.entregable_model import Entregable
+from ..models.excel_data import Entregables
 from .constans import map_disciplinas, map_clasificacion_entregable, map_tipo_entregable
 from ..models.excel_data import Proyectos
 from typing import Optional
@@ -101,7 +101,7 @@ class TableStatePDF(rx.State):
     def codigo_existe(self, codigo):
         """Verifica si el código del entregable ya existe en la base de datos."""
         with get_session() as session:
-            return session.query(Entregable).filter_by(codigo_entregable=codigo).first() is not None
+            return session.query(Entregables).filter_by(codigo_entregable=codigo).first() is not None
 
     def corregir_y_guardar(self):
         """Valida los datos y ajusta los estados para mostrar mensajes o el resumen."""
@@ -188,7 +188,7 @@ class TableStatePDF(rx.State):
 
             # Guardar los datos en la base de datos
             with get_session() as session:
-                entregable = Entregable(
+                entregable = Entregables(
                     nombre_entregable=self.nombre_entregable,
                     codigo_proyecto=self.codigo_proyecto,
                     disciplina=self.disciplina,

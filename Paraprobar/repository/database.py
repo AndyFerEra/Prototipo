@@ -1,6 +1,6 @@
 from sqlmodel import create_engine, Session, select,SQLModel
-from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables
-from ..models.entregable_model import Entregable
+from sqlalchemy.sql import text
+from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables,vistaentregablesproyectos
 
 
 DATABASE_URL = "mysql+mysqlconnector://root:@localhost/pro_bisa"
@@ -12,12 +12,6 @@ def init_db():
 def get_session():
     return Session(engine)
 
-# Obtener todos los registros de la tabla "Entregable"
-def select_all_entregables():
-    with Session(engine) as session:
-        statement = select(Entregable)
-        results = session.exec(statement)
-        return results.all()
     
 #prueba
 def select_all():
@@ -44,6 +38,12 @@ def select_all_entregables_2():
         statement = select(Entregables)
         results = session.exec(statement)
         return results.all() 
+    
+def lafeeeeeeeeeeeee():
+    with Session(engine) as session:
+        statement = select(vistaentregablesproyectos)
+        results = session.exec(statement)
+        return results.all()
         
 def get_unique_codigo_proyectos():
     """Obtiene una lista de códigos de proyecto únicos de la base de datos."""
