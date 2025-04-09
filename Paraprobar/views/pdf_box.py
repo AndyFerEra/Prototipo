@@ -64,6 +64,37 @@ def file_upload_PDF() -> rx.Component:
                 rx.box(
                     rx.vstack(
                         rx.hstack(
+                            rx.text("Código de entregable:", width="150px", align="left", font_weight="bold", color="#1e252b"),
+                            rx.input(
+                                value=TableStatePDF.codigo_entregable,
+                                on_change=TableStatePDF.set_codigo_entregable,
+                                placeholder="Código de entregable",
+                                color_scheme="crimson",
+                                aling="right",
+                                width="70%",
+                            ),
+                            rx.tooltip(
+                                rx.icon(
+                                    "circle_alert",
+                                    size=20,
+                                    color="#e9004c",
+                                    display=rx.cond(
+                                        TableStatePDF.codigo_entregable == "",
+                                        "flex",
+                                        "none"
+                                    ),
+                                ),
+                                content="Debe rellenar el campo Código de entregable",
+                                placement="top",
+                                background_color="#e9004c",
+                                color="white",
+                                border_radius="6px",
+                                padding="0.5rem",
+                            ),
+                            width="100%",
+                            justify_content="space-between",
+                        ),
+                        rx.hstack(
                             rx.text("Nombre del Entregable:", width="150px", align="left", font_weight="bold", color="#1e252b"),
                             rx.input(
                                 value=TableStatePDF.nombre_entregable,
@@ -255,37 +286,6 @@ def file_upload_PDF() -> rx.Component:
                                     ),
                                 ),
                                 content="Debe rellenar el campo Tipo de entregable",
-                                placement="top",
-                                background_color="#e9004c",
-                                color="white",
-                                border_radius="6px",
-                                padding="0.5rem",
-                            ),
-                            width="100%",
-                            justify_content="space-between",
-                        ),
-                        rx.hstack(
-                            rx.text("Código de entregable:", width="150px", align="left", font_weight="bold", color="#1e252b"),
-                            rx.input(
-                                value=TableStatePDF.codigo_entregable,
-                                on_change=TableStatePDF.set_codigo_entregable,
-                                placeholder="Código de entregable",
-                                color_scheme="crimson",
-                                aling="right",
-                                width="70%",
-                            ),
-                            rx.tooltip(
-                                rx.icon(
-                                    "circle_alert",
-                                    size=20,
-                                    color="#e9004c",
-                                    display=rx.cond(
-                                        TableStatePDF.codigo_entregable == "",
-                                        "flex",
-                                        "none"
-                                    ),
-                                ),
-                                content="Debe rellenar el campo Código de entregable",
                                 placement="top",
                                 background_color="#e9004c",
                                 color="white",

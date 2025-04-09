@@ -95,11 +95,44 @@ class TableStatePDF(rx.State):
                 border="1px solid #ccc",
                 padding="1rem",
                 border_radius="4px",
-                width="177%",
+                width="150%",
                 background="#f8f9fa"
             ),
             spacing="2",
         )
+    
+    def buscar_entregable_por_codigo(self, codigo: str):
+        """Busca un entregable por su código y devuelve sus datos si existe"""
+        with get_session() as session:
+            entregable = session.query(Entregables).filter_by(codigo_entregable=codigo).first()
+            if entregable:
+                return {
+                    "nombre_entregable": entregable.nombre_entregable,
+                    "codigo_proyecto": entregable.codigo_proyecto_entregables,
+                    "disciplina": entregable.disciplina_entregables,
+                    "clasificacion_entregable": entregable.clasificacion_entregable,
+                    "tipo_entregable": entregable.tipo_entregable_entre,
+                    "total_hh": str(entregable.total_hh) if entregable.total_hh else "",
+                }
+            return None
+        
+    def set_codigo_entregable(self, codigo: str):
+        """Establece el código de entregable y autocompleta los campos si existe"""
+        self.codigo_entregable = codigo
+        
+        # Solo buscar si el código no está vacío
+        if codigo.strip():
+            entregable = self.buscar_entregable_por_codigo(codigo)
+            if entregable:
+                self.nombre_entregable = entregable["nombre_entregable"]
+                self.codigo_proyecto = entregable["codigo_proyecto"]
+                self.disciplina = entregable["disciplina"]
+                self.clasificacion_entregable = entregable["clasificacion_entregable"]
+                self.tipo_entregable = entregable["tipo_entregable"]
+                self.total_hh = entregable["total_hh"]
+                
+                # Verificar también el proyecto
+                self.verificar_proyecto(entregable["codigo_proyecto"])
 
     def verificar_proyecto(self, codigo_proyecto: str):
         """Verifica si el código del proyecto existe en la base de datos."""

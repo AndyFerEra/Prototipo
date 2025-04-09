@@ -18,13 +18,20 @@ def _header_cell(text: str, icon: str) -> rx.Component:
 
 def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
     # Función segura para generar URLs
+    # En tu backend, antes de crear los objetos Entregables:
     def safe_path(path):
+        # Usar rx.cond para manejar el tipo Var
         return rx.cond(
             path,
-            f"http://localhost:8011/{path.replace('C:\\Users\\Leo\\COBRA PERU S.A\\', '').replace('\\', '/')}",
-            "#"
+            "http://localhost:8011/" + 
+            path.replace("C:\\Users\\Leo\\COBRA PERU S.A\\", "")
+                .replace("C:/Users/Leo/COBRA PERU S.A/", "")
+                .replace("\\", "/")
+                .replace("//", "/")
+                .replace("C:/Users/Leo/COBRA PERU S.A/", ""),
+            None  # Si path es None o no válido
         )
-
+        
     bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
     hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
 

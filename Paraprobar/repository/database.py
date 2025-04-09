@@ -4,6 +4,8 @@ from ..models.excel_data import Reglas,Proyectos,Entregables
 from ..models.entregable_model import Entregable
 from supabase import create_client, Client
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
+from sqlmodel import create_engine
 import os
 
 load_dotenv()
@@ -17,7 +19,13 @@ DATABASE_ENV = os.getenv("DATABASE_ENV")
 supabase: Client = create_client("https://arqzlruygpuwmyosqerh.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFycXpscnV5Z3B1d215b3NxZXJoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MzAxMDY2MywiZXhwIjoyMDU4NTg2NjYzfQ.j7uQFzd7tgQLJQLGLOuVGdyirGiCaVk1Jp4Phw0H2lY")
 
 # Construir la URL de conexión a la base de datos
-DATABASE_URL = f"mysql+mysqlconnector://{USER_ENV}:{PASS_ENV}@localhost/{DATABASE_ENV}"
+#DATABASE_URL = f"mysql+mysqlconnector://{USER_ENV}:{PASS_ENV}@localhost/{DATABASE_ENV}"
+# Codificar la contraseña (por el carácter @)
+password = "uncp@2024"
+encoded_password = quote_plus(password)
+
+# Cadena de conexión
+DATABASE_URL = f"mssql+pyodbc://sa:{encoded_password}@DESKTOP-FJD64AH/proy_bisa?driver=ODBC+Driver+17+for+SQL+Server"
 engine = create_engine(DATABASE_URL)
 
 # Inicializar la base de datos

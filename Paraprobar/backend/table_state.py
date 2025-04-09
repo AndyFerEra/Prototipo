@@ -602,11 +602,15 @@ class TableState(rx.State):
                     select(func.count()).select_from(query.subquery())
                 ).one()
                 
-                # Aplicar ordenamiento
-                if self.sort_value_entregables:
-                    field = getattr(Entregables, self.sort_value_entregables)
-                    direction = desc if self.sort_reverse_entregables else asc
-                    query = query.order_by(direction(field))
+                # Aplicar ordenamiento (SIEMPRE necesitamos un ORDER BY para paginación en SQL Server)
+                if not self.sort_value_entregables:
+                    # Si no hay criterio de ordenamiento, usamos uno por defecto (puede ser el ID o cualquier campo)
+                    self.sort_value_entregables = "id"  # Asegúrate que este campo exista en tu modelo
+                    self.sort_reverse_entregables = False
+                
+                field = getattr(Entregables, self.sort_value_entregables)
+                direction = desc if self.sort_reverse_entregables else asc
+                query = query.order_by(direction(field))
                 
                 # Aplicar paginación
                 query = query.offset(self.offset).limit(self.limit)
