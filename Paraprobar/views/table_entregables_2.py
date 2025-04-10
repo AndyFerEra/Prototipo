@@ -32,7 +32,7 @@ def _header_cell(text: str, icon: str = None, options: list[str] = None) -> rx.C
         ),
     )
 
-def _show_item_entregables(item: Entregables, index: int) -> rx.Component:
+def _show_item_entregables(item: vistaentregablesproyectos, index: int) -> rx.Component:
     # Función segura para generar URLs
     # En tu backend, antes de crear los objetos Entregables:
     def safe_path(path):

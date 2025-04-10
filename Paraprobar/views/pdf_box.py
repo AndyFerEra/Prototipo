@@ -9,14 +9,14 @@ def file_upload_PDF() -> rx.Component:
         return rx.vstack(
             # Visor PDF
             rx.cond(
-                TableStatePDF.uploaded_file,
-                TableStatePDF.pdf_component,
-                rx.text("No hay PDF cargado")
+            TableStatePDF.uploaded_file,
+            TableStatePDF.pdf_component,
+            rx.text("No hay PDF cargado", color="black")
             ),
             rx.cond(
-                TableStatePDF.uploaded_file_original,
-                TableStatePDF.original_file_component, 
-                rx.text("No hay archivo original cargado")
+            TableStatePDF.uploaded_file_original,
+            TableStatePDF.original_file_component, 
+            rx.text("No hay archivo original cargado", color="black")
             ),
             spacing="4"
         )

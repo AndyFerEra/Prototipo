@@ -13,15 +13,6 @@ from elasticsearch import Elasticsearch
 # Agrega esto al inicio del archivo
 es = Elasticsearch("http://localhost:9200")
 
-class Item(rx.Base):
-    """La clase Item."""
-
-    pipeline: str
-    status: str
-    workflow: str
-    timestamp: str
-    duration: str
-
 class TableState(rx.State):
     """La clase State."""
     items: List[ExcelData] = []
