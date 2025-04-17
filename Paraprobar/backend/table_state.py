@@ -51,6 +51,16 @@ class TableState(rx.State):
         return ["Ninguno"] + valores
     
     @rx.var(cache=False)
+    def unique_codigo_proyectos_cliente(self) -> list[str]:
+        valores = get_unique_values_by_column("cliente") or []
+        return ["Ninguno"] + valores
+    
+    @rx.var(cache=False)
+    def unique_codigo_proyectos_nom_proy(self) -> list[str]:
+        valores = get_unique_values_by_column("nombre_proyecto") or []
+        return ["Ninguno"] + valores
+    
+    @rx.var(cache=False)
     def unique_codigo_proyectos_disciplina(self) -> list[str]:
         valores = get_unique_values_by_column("disciplina_entregables") or []
         return ["Ninguno"] + valores
@@ -183,7 +193,7 @@ class TableState(rx.State):
         """Aplica filtros, búsqueda y ordenación antes de paginar los datos."""
         data = lafeeeeeeeeeeeee()  # Asegúrate de que esta función trae todos los datos
 
-        # Aplicar los filtros combo box
+        # Aplicar los filtros combo box / esto permite buscar por el combo box
         for column, value in self.filters.items():
             if column == "Cod Pry":
                 data = [item for item in data if item.codigo_proyecto_entregables == value]
@@ -191,10 +201,11 @@ class TableState(rx.State):
                 data = [item for item in data if item.disciplina_entregables == value]
             elif column == "Tipo Entrgbl":
                 data = [item for item in data if item.tipo_entregable_entre == value]
-            elif column == "Codigo Entrgbl":
-                data = [item for item in data if item.codigo_entregable == value]
-            elif column == "Nombre Entrgbl":
-                data = [item for item in data if item.nombre_entregable == value]
+            elif column == "Cliente":
+                data = [item for item in data if item.cliente == value]
+            elif column == "Proyecto":
+                data = [item for item in data if item.nombre_proyecto == value]
+            
 
         # Filtrar elementos basados en el valor de búsqueda
         if self.search_value_entregables:
@@ -203,13 +214,10 @@ class TableState(rx.State):
             data = [
                 item
                 for item in data
-                if any(
+                if any(#Esto es para lo que nos permite buscar en el input de busqueda
                     search_value in str(getattr(item, attr)).lower()
                     for attr in [
                         "codigo_proyecto_entregables", # Codigo Pry
-                        "disciplina_entregables", # Disciplina
-                        "tipo_entregable_entre", # Tipo Entrgbl
-                        "codigo_entregable", # Codigo Entrgbl
                         "nombre_entregable", # Nombre Entrgbl
                     ]
                 )
@@ -244,7 +252,7 @@ class TableState(rx.State):
         
     #tabla proyectos falta ver bien del todo 
     @rx.var(cache=True, initial_value=[])
-    def get_current_page_proyectos(self) -> list[Proyectos]:
+    def get_current_page_proyectosA(self) -> list[Proyectos]:
         start_index = self.offset
         end_index = start_index + self.limit
         return self.filtered_sorted_items_proyectos[start_index:end_index]
@@ -257,29 +265,20 @@ class TableState(rx.State):
         return self.filtered_sorted_items_entregables[start_index:end_index]
 
     def next_page(self):
-        """Avanzar a la siguiente página"""
-        if (self.offset + self.limit) < self.total_items:
+        if self.page_number < self.total_pages:
             self.offset += self.limit
-            return self.load_entries_entregables()  # <-- Asegúrate de llamar a load_entries_entregables
 
     def prev_page(self):
-        """Retroceder a la página anterior"""
-        if self.offset > 0:
+        if self.page_number > 1:
             self.offset -= self.limit
-            return self.load_entries_entregables()  # <-- Asegúrate de llamar a load_entries_entregables
 
     def first_page(self):
-        """Ir a la primera página"""
         self.offset = 0
-        return self.load_entries_entregables()  # Faltaba este return
-
+        
     def last_page(self):
         """Ir a la última página"""
         self.offset = (self.total_pages - 1) * self.limit
-        return self.load_entries_entregables()  # Faltaba este return
-            
-    #para la lectura y subida de datos        
-           
+        
             
     def toggle_sort(self):
         self.sort_reverse = not self.sort_reverse
@@ -418,42 +417,31 @@ class TableState(rx.State):
  #cargar datos de bd de proyectos
     def load_entries_proyectos(self):
         """Carga los datos al cargar la página"""
-        
         try:
-            datos_db = select_all_proyectos()  # Obtiene los datos desde la base de datos
-            #print(f"Datos obtenidos de proyectos: {datos_db}")  # Debugging
+            with Session(engine) as session:
+                # Consulta base
+                query = select(Proyectos)
+                
+                # Ejecutar la consulta y obtener los datos
+                datos_db = session.exec(query).all()
 
-            self.items = [
-                Proyectos(
-                    id=item.id,
-                    codigo_proyecto=item.codigo_proyecto,
-                    orden_trabajo=item.orden_trabajo,
-                    cliente=item.cliente,
-                    nombre_proyecto=item.nombre_proyecto,
-                    sector=item.sector,
-                    etapa_ing=item.etapa_ing,
-                    pais=item.pais,
-                    año=item.año,
-                    estado=item.estado,
-                    cant_entrg_prop=item.cant_entrg_prop,
-                    hh_propuesta=item.hh_propuesta,
-                    presu_costo_directo=item.presu_costo_directo,
-                    presu_total_sindescu=item.presu_total_sindescu,
-                    ratiohh_entrg_propuesta=item.ratiohh_entrg_propuesta,
-                    ratiocd_entreg_pro=item.ratiocd_entreg_pro,
-                    margenes_propuesta=item.margenes_propuesta,
-                    cantidad_entregables_cierre=item.cantidad_entregables_cierre,
-                    hh_cierre=item.hh_cierre,
-                    venta_cierre=item.venta_cierre,
-                    ratiohh_entrg_cierre=item.ratiohh_entrg_cierre,
-                    ratiocosto_entrg_cierre=item.ratiocosto_entrg_cierre,
-                    margenes_cierre=item.margenes_cierre,
-                )
-                for item in datos_db
-            ]
-            self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_proyectos)
-            self.total_items = len(self.items)
-            print(f"Se cargaron {self.total_items} registros desde la base de datos de proyectos.")
+                self.items = [
+                    Proyectos(
+                        codigo_proyecto=item.codigo_proyecto,
+                        cliente=item.cliente,
+                        nombre_proyecto=item.nombre_proyecto,
+                        etapa_ing=item.etapa_ing,
+                        año=item.año,
+                        cantidad_entregables_cierre=item.cantidad_entregables_cierre,
+                        venta_cierre=item.venta_cierre,
+                        ratiohh_entrg_cierre=item.ratiohh_entrg_cierre,
+                        ratiocosto_entrg_cierre=item.ratiocosto_entrg_cierre,
+                    )
+                    for item in datos_db
+                ]
+                self.items.sort(key=lambda x: x.id, reverse=self.sort_reverse_proyectos)
+                self.total_items = len(self.items)
+                #print(f"Se cargaron {self.total_items} registros desde la base de datos de proyectos.")
 
         except Exception as e:
             print(f"Error al cargar los datos de la base de datos: {e}")     
@@ -571,15 +559,13 @@ class TableState(rx.State):
                 ).one()
                 
                 # Aplicar paginación
-                query = query.offset(self.offset).limit(self.limit)
-                self.items = session.exec(query).all()
+                """ query = query.offset(self.offset).limit(self.limit)
+                self.items = session.exec(query).all() """
                 
         except Exception as e:
             #print(f"Error al cargar entregables: {e}")
             self.items = []
             self.total_items = 0    
-
-    
 
     def handle_upload_entregables(self, files: list):
         try:

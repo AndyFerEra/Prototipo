@@ -267,17 +267,17 @@ def main_table_2() -> rx.Component:
         rx.table.root(
             rx.table.header(
                 rx.table.row(
-                    _header_cell("ID", "hash"),
+                    _header_cell("ID"),
                     _header_cell("Cod Pry", options=TableState.unique_codigo_proyectos_cod_pry),
-                    _header_cell("Cliente"),
-                    _header_cell("Proyecto"),
+                    _header_cell("Cliente", options=TableState.unique_codigo_proyectos_cliente),
+                    _header_cell("Proyecto", options=TableState.unique_codigo_proyectos_nom_proy),
                     _header_cell("Disciplina",  options=TableState.unique_codigo_proyectos_disciplina),
                     _header_cell("Tipo Entrgbl",  options=TableState.unique_codigo_proyectos_tip_entre),
                     _header_cell("Codigo Entrgbl"),
                     _header_cell("Nombre Entrgbl"),
                     _header_cell("HH Venta"),
                     _header_cell("PDF", "file-text"),
-                    _header_cell("Editable", "pencil-line"),
+                    _header_cell("Editable"),
                 ),
             ),
             rx.table.body( 
