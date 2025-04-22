@@ -235,19 +235,25 @@ def main_table_2() -> rx.Component:
                     cursor="pointer",
                     on_change=TableState.set_sort_value,
                 ),
-                #todo pa buscar
+                # Input de búsqueda unificado que filtrará tanto la tabla como Elasticsearch
                 rx.input(
                     rx.input.slot(rx.icon("search")),
                     rx.input.slot(
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=lambda: TableState.set_search_value_entregables(""),  # Limpiar búsqueda
+                        on_click=lambda: [
+                            TableState.set_search_value_entregables(""),
+                            TableState.perform_search("")
+                        ],
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
                     value=TableState.search_value_entregables,
                     placeholder="Buscar...",
-                    on_change=TableState.set_search_value_entregables,  # Actualizar al escribir
+                    on_change=lambda value: [
+                        TableState.set_search_value_entregables(value),
+                        TableState.perform_search(value)
+                    ],
                     width="100%",
                 ),
                 align="center",
@@ -307,5 +313,82 @@ def main_table_2() -> rx.Component:
             width="100%",
         ),
         _pagination_view(),
-        width="100%",
+        
+        # Sección de resultados de búsqueda dinámica
+        rx.box(
+            rx.cond(
+                TableState.search_value_entregables != "",
+                rx.vstack(
+                    rx.heading("Resultados en documentos", size="4"),
+                    rx.text(f"Búsqueda: '{TableState.search_value_entregables}'", size="2", color="gray"),
+                    rx.divider(),
+                    
+                    rx.cond(
+                        TableState.elasticsearch_loading,
+                        rx.center(rx.spinner(size="3"), padding="4"),
+                        
+                        rx.box(
+                            rx.cond(
+                                TableState.elasticsearch_error,
+                                rx.callout(
+                                    TableState.elasticsearch_error,
+                                    icon="alert-triangle",
+                                    color_scheme="red",
+                                    width="100%"
+                                ),
+                                rx.fragment()
+                            ),
+                            
+                            rx.cond(
+                                TableState.elasticsearch_results.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(
+                                        TableState.elasticsearch_results,
+                                        lambda item: rx.card(
+                                            rx.box(
+                                                rx.hstack(
+                                                    rx.text("Código:", weight="bold"),
+                                                    rx.text(item["codigo"]),
+                                                    rx.text("Página:", weight="bold"),
+                                                    rx.text(item["pagina"]),
+                                                    spacing="3"
+                                                ),
+                                                rx.divider(),
+                                                rx.box(
+                                                    rx.cond(
+                                                        item["highlight"],
+                                                        rx.html(item["highlight"]),
+                                                        rx.text(item["texto"], color="gray")
+                                                    ),
+                                                    padding="3",
+                                                    bg="gray.50",
+                                                    border_radius="md"
+                                                ),
+                                                rx.link(
+                                                    rx.button("Ver PDF", size="1", variant="soft"),
+                                                    href=item["enlace"],
+                                                    is_external=True
+                                                ),
+                                                spacing="2"
+                                            ),
+                                            width="100%",
+                                            margin_bottom="1em"
+                                        )
+                                    )
+                                ),
+                                
+                                rx.callout(
+                                    "No se encontraron resultados para esta búsqueda",
+                                    icon="info",
+                                    color_scheme="blue"
+                                )
+                            )
+                        )
+                    ),
+                    spacing="3"
+                )
+            ),
+            margin_top="2em"
+        ),
+        width="100%"
     )

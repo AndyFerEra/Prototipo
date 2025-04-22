@@ -1,4 +1,5 @@
-import csv
+from elasticsearch import Elasticsearch, AsyncElasticsearch
+import asyncio
 from pathlib import Path
 from typing import List
 import pandas as pd
@@ -11,7 +12,6 @@ import time
 import reflex as rx
 from elasticsearch import Elasticsearch
 
-# Agrega esto al inicio del archivo
 es = Elasticsearch("http://localhost:9200")
 
 class Item(rx.Base):
@@ -52,61 +52,179 @@ class TableState(rx.State):
 
     pdf_matches: dict = {}  # Almacenará coincidencias en PDFs por código de entregable
     
-    def search_in_elasticsearch(self, search_term: str):
-        """Busca en Elasticsearch y guarda resultados"""
-        with self:
-            self.pdf_matches = {}  # Limpiar resultados anteriores
-            
-            if not search_term:
-                return
-                
-            try:
-                query = {
-                    "query": {
-                        "match": {
-                            "texto": {
-                                "query": search_term,
-                                "operator": "and"
-                            }
-                        }
-                    },
-                    "_source": ["codigo_entregable", "pagina", "texto"],
-                    "size": 1000  # Aumentar si hay muchos resultados
-                }
-                
-                result = es.search(index="pdf_documents", body=query)
-                
-                for hit in result['hits']['hits']:
-                    codigo = hit['_source']['codigo_entregable']
-                    if codigo not in self.pdf_matches:
-                        self.pdf_matches[codigo] = []
-                    
-                    texto = hit['_source']['texto']
-                    term_lower = search_term.lower()
-                    texto_lower = texto.lower()
-                    inicio = texto_lower.find(term_lower)
-                    
-                    # Extraer fragmento de contexto
-                    fragmento = texto[max(0, inicio-50):min(len(texto), inicio+len(term_lower)+50)] if inicio != -1 else ""
-                    
-                    self.pdf_matches[codigo].append({
-                        "pagina": hit['_source']['pagina'],
-                        "fragmento": fragmento.strip() if fragmento else ""
-                    })
-                    
-            except Exception as e:
-                print(f"Error en búsqueda Elasticsearch: {e}")
+    # Estados para Elasticsearch
+    elasticsearch_results: list[dict] = []
+    elasticsearch_loading: bool = False
+    elasticsearch_error: str = ""
 
-    def set_search_value_entregables(self, value: str):
-        """Actualiza el valor de búsqueda y realiza la búsqueda"""
-        self.search_value_entregables = value
-        self.offset = 0  # Resetear a la primera página
+    async def test_elasticsearch_connection(self):
+        """Método para probar la conexión con Elasticsearch con término estático"""
+        self.elasticsearch_loading = True
+        self.elasticsearch_error = ""
+        self.elasticsearch_results = []
         
-        # Realizar búsqueda en Elasticsearch
-        self.search_in_elasticsearch(value)
+        try:
+            if not es.ping():
+                raise ConnectionError("No se puede conectar a Elasticsearch")
+
+            # Búsqueda estática con "cianuro"
+            query = {
+                "query": {
+                    "match": {
+                        "texto": {
+                            "query": "cianuro",
+                            "operator": "and"
+                        }
+                    }
+                },
+                "highlight": {
+                    "fields": {
+                        "texto": {
+                            "fragment_size": 150,
+                            "number_of_fragments": 1,
+                            "pre_tags": ["<mark>"],
+                            "post_tags": ["</mark>"]
+                        }
+                    }
+                },
+                "_source": ["codigo_entregable", "pagina", "texto", "ruta_pdf"],
+                "size": 10
+            }
+            
+            response = es.search(index="pdf_documents", body=query)
+            hits = response['hits']['hits']
+            
+            results = []
+            for hit in hits:
+                source = hit['_source']
+                highlight = hit.get('highlight', {}).get('texto', [''])[0]
+                
+                ruta_pdf = source.get('ruta_pdf', '')
+                if ruta_pdf:
+                    ruta_normalizada = ruta_pdf.replace('\\', '/')
+                    if ruta_normalizada.startswith('C:/Users/Leo/COBRA PERU S.A/'):
+                        ruta_normalizada = ruta_normalizada[len('C:/Users/Leo/COBRA PERU S.A/'):]
+                    enlace = f"http://localhost:8011/{ruta_normalizada}"
+                else:
+                    enlace = "#"
+                
+                results.append({
+                    "codigo": source.get('codigo_entregable', 'N/A'),
+                    "pagina": str(source.get('pagina', 'N/A')),
+                    "texto": source.get('texto', '')[:200] + '...',
+                    "highlight": highlight,
+                    "enlace": enlace
+                })
+            
+            self.elasticsearch_results = results
+            
+        except Exception as e:
+            self.elasticsearch_error = f"Error en prueba estática: {str(e)}"
+        finally:
+            self.elasticsearch_loading = False
+    
+    async def perform_search(self, search_term: str):
+        """Realiza la búsqueda dinámica en Elasticsearch"""
+        self.elasticsearch_loading = True
+        self.elasticsearch_error = ""
+        self.elasticsearch_results = []
         
-        # Recargar los entregables
-        return self.load_entries_entregables()
+        try:
+            if not search_term.strip():
+                self.elasticsearch_loading = False
+                return
+
+            if not es.ping():
+                raise ConnectionError("No se puede conectar a Elasticsearch")
+
+            query = {
+                "query": {
+                    "match": {
+                        "texto": {
+                            "query": search_term,
+                            "operator": "and"
+                        }
+                    }
+                },
+                "highlight": {
+                    "fields": {
+                        "texto": {
+                            "fragment_size": 150,
+                            "number_of_fragments": 1,
+                            "pre_tags": ["<mark>"],
+                            "post_tags": ["</mark>"]
+                        }
+                    }
+                },
+                "_source": ["codigo_entregable", "pagina", "texto", "ruta_pdf"],
+                "size": 10
+            }
+            
+            response = es.search(index="pdf_documents", body=query)
+            hits = response['hits']['hits']
+            
+            results = []
+            for hit in hits:
+                source = hit['_source']
+                highlight = hit.get('highlight', {}).get('texto', [''])[0]
+                
+                ruta_pdf = source.get('ruta_pdf', '')
+                if ruta_pdf:
+                    ruta_normalizada = ruta_pdf.replace('\\', '/')
+                    if ruta_normalizada.startswith('C:/Users/Leo/COBRA PERU S.A/'):
+                        ruta_normalizada = ruta_normalizada[len('C:/Users/Leo/COBRA PERU S.A/'):]
+                    enlace = f"http://localhost:8011/{ruta_normalizada}"
+                else:
+                    enlace = "#"
+                
+                results.append({
+                    "codigo": source.get('codigo_entregable', 'N/A'),
+                    "pagina": str(source.get('pagina', 'N/A')),
+                    "texto": source.get('texto', '')[:200] + '...',
+                    "highlight": highlight,
+                    "enlace": enlace
+                })
+            
+            self.elasticsearch_results = results
+            
+        except Exception as e:
+            self.elasticsearch_error = f"Error en búsqueda: {str(e)}"
+        finally:
+            self.elasticsearch_loading = False
+    
+    def _build_query(self, search_term: str) -> dict:
+        """Construye el query compatible con ES"""
+        return {
+            "query": {
+                "multi_match": {
+                    "query": search_term,
+                    "fields": ["texto", "codigo_entregable^3"],
+                    "operator": "and"
+                }
+            },
+            "highlight": {
+                "fields": {
+                    "texto": {
+                        "fragment_size": 150,
+                        "number_of_fragments": 1
+                    }
+                }
+            },
+            "size": 5
+        }
+    
+    def _process_response(self, response):
+        """Procesa la respuesta de ES"""
+        self.elasticsearch_results = [
+            {
+                "codigo": hit["_source"].get("codigo_entregable", "N/A"),
+                "pagina": hit["_source"].get("pagina", "N/A"),
+                "texto": hit["_source"].get("texto", "")[:200] + "...",
+                "highlight": hit.get("highlight", {}).get("texto", [""])[0],
+                "enlace": f"http://localhost:8011/{hit['_source'].get('pdf_path', '').replace('\\', '/')}"
+            }
+            for hit in response["hits"]["hits"]
+        ]
     
     def reset_upload_state_entregables(self):
         """Restablece el estado de la subida de archivo y redirige."""

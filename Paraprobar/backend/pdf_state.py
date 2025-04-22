@@ -95,7 +95,7 @@ class TableStatePDF(rx.State):
                 border="1px solid #ccc",
                 padding="1rem",
                 border_radius="4px",
-                width="150%",
+                width="100%",
                 background="#f8f9fa"
             ),
             spacing="2",
