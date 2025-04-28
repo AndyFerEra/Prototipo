@@ -196,6 +196,7 @@ def file_upload_entregables() -> rx.Component:
         print(f"An error occurred: {e}")
 
 def main_table_2() -> rx.Component:
+    
     return rx.box(
         #ordenar mayor menor y busqueda y boton de descarga
         rx.flex(
@@ -319,13 +320,35 @@ def main_table_2() -> rx.Component:
             rx.cond(
                 TableState.search_value_entregables != "",
                 rx.vstack(
-                    rx.heading("Resultados en documentos", size="4"),
-                    rx.text(f"Búsqueda: '{TableState.search_value_entregables}'", size="2", color="gray"),
-                    rx.divider(),
+                    rx.heading(
+                        "Resultados en contenido de entregables", 
+                        size="6",
+                        color="slate.800",
+                        font_weight="semibold",
+                        padding_bottom="0.5em"
+                    ),
+                    rx.box(
+                        rx.text(
+                            f"Búsqueda: '{TableState.search_value_entregables}'", 
+                            size="2", 
+                            color="slate.500",
+                            font_style="italic"
+                        ),
+                        padding_bottom="1em"
+                    ),
+                    rx.divider(border_color="slate.200"),
                     
                     rx.cond(
                         TableState.elasticsearch_loading,
-                        rx.center(rx.spinner(size="3"), padding="4"),
+                        rx.center(
+                            rx.spinner(
+                                size="3",
+                                color="blue.500",
+                                thickness="3px",
+                                speed="1s"
+                            ), 
+                            padding="6"
+                        ),
                         
                         rx.box(
                             rx.cond(
@@ -334,7 +357,9 @@ def main_table_2() -> rx.Component:
                                     TableState.elasticsearch_error,
                                     icon="alert-triangle",
                                     color_scheme="red",
-                                    width="100%"
+                                    width="100%",
+                                    variant="soft",
+                                    margin_bottom="1em"
                                 ),
                                 rx.fragment()
                             ),
@@ -345,50 +370,96 @@ def main_table_2() -> rx.Component:
                                     rx.foreach(
                                         TableState.elasticsearch_results,
                                         lambda item: rx.card(
-                                            rx.box(
+                                            rx.vstack(
                                                 rx.hstack(
-                                                    rx.text("Código:", weight="bold"),
-                                                    rx.text(item["codigo"]),
-                                                    rx.text("Página:", weight="bold"),
-                                                    rx.text(item["pagina"]),
-                                                    spacing="3"
+                                                    rx.badge(
+                                                        "Código de Entregable:",
+                                                        color_scheme="blue",
+                                                        variant="soft"
+                                                    ),
+                                                    rx.text(
+                                                        item["codigo"],
+                                                        weight="medium"
+                                                    ),
+                                                    rx.badge(
+                                                        "Página:",
+                                                        color_scheme="blue",
+                                                        variant="soft"
+                                                    ),
+                                                    rx.text(
+                                                        item["pagina"],
+                                                        weight="medium"
+                                                    ),
+                                                    spacing="3",
+                                                    align="center"
                                                 ),
-                                                rx.divider(),
+                                                rx.divider(border_color="slate.100"),
                                                 rx.box(
                                                     rx.cond(
                                                         item["highlight"],
-                                                        rx.html(item["highlight"]),
-                                                        rx.text(item["texto"], color="gray")
+                                                        rx.html(
+                                                            item["highlight"],
+                                                            style={
+                                                                "line-height": "1.5",
+                                                                "font-size": "0.9em"
+                                                            }
+                                                        ),
+                                                        rx.text(
+                                                            item["texto"], 
+                                                            color="slate.600",
+                                                            size="2"
+                                                        )
                                                     ),
                                                     padding="3",
-                                                    bg="gray.50",
-                                                    border_radius="md"
+                                                    bg="slate.50",
+                                                    border_radius="lg",
                                                 ),
                                                 rx.link(
-                                                    rx.button("Ver PDF", size="1", variant="soft"),
+                                                    rx.button(
+                                                        rx.text("Ver PDF en página "), 
+                                                        rx.text(item["pagina"]),
+                                                        size="2",
+                                                        variant="solid",
+                                                        color_scheme="blue",
+                                                        right_icon="arrow-up-right"
+                                                    ),
                                                     href=item["enlace"],
                                                     is_external=True
                                                 ),
-                                                spacing="2"
+                                                spacing="3",
+                                                padding="0.5em"
                                             ),
                                             width="100%",
-                                            margin_bottom="1em"
+                                            margin_bottom="1.5em",
+                                            box_shadow="sm",
+                                            _hover={
+                                                "box_shadow": "md",
+                                                "transform": "translateY(-2px)",
+                                                "transition": "all 0.2s"
+                                            }
                                         )
-                                    )
+                                    ),
+                                    spacing="3",  # El spacing debe estar en el vstack que contiene el foreach
+                                    width="100%",
+                                    padding_top="0.5em"
                                 ),
                                 
                                 rx.callout(
                                     "No se encontraron resultados para esta búsqueda",
                                     icon="info",
-                                    color_scheme="blue"
+                                    color_scheme="blue",
+                                    variant="soft",
+                                    width="100%"
                                 )
                             )
                         )
                     ),
-                    spacing="3"
+                    spacing="4",
+                    width="100%"
                 )
             ),
-            margin_top="2em"
-        ),
-        width="100%"
+            margin_top="2.5em",
+            padding_x="1em",
+            width="100%"
+        )
     )

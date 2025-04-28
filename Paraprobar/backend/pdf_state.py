@@ -8,6 +8,10 @@ from ..models.excel_data import Entregables
 from .constans import map_disciplinas, map_clasificacion_entregable, map_tipo_entregable
 from ..models.excel_data import Proyectos
 from typing import Optional
+import fitz  # PyMuPDF
+import cv2
+import easyocr
+from elasticsearch import Elasticsearch
 
 # Cargar el modelo YOLO
 ruta_modelo = os.path.join(os.path.dirname(__file__), "modelos", "best.pt")
@@ -26,6 +30,90 @@ def normalizar_valor_con_mapeo(valor, mapeo):
             if variante.strip().lower() == valor_limpio:
                 return clave
     return "Seleccionar"
+
+## ELASTICSEARCH ##
+# Configurar conexión a Elasticsearch (añade esto después de las importaciones)
+es = Elasticsearch("http://localhost:9200")
+
+def pdf_a_imagen(pdf_path, dpi=300):
+    try:
+        doc = fitz.open(pdf_path)
+        page = doc[0]  # Solo la primera página
+        mat = fitz.Matrix(dpi / 180, dpi / 180)
+        pix = page.get_pixmap(matrix=mat, alpha=False)
+        imagen_path = "temp_pagina.png"
+        pix.save(imagen_path)
+        return imagen_path
+    except Exception as e:
+        print(f"Error al convertir PDF a imagen: {e}")
+        return None
+
+def detectar_roi_y_extraer_texto(imagen_path, modelo_yolo):
+    try:
+        imagen = cv2.imread(imagen_path)
+        resultados = modelo_yolo(imagen_path)
+        
+        for resultado in resultados:
+            cajas = resultado.boxes.xyxy
+            for caja in cajas:
+                x1, y1, x2, y2 = map(int, caja)
+                roi = imagen[y1:y2, x1:x2]
+                roi_path = "temp_roi.png"
+                cv2.imwrite(roi_path, roi)
+                
+                reader = easyocr.Reader(["es"])
+                result = reader.readtext(roi_path)
+                texto = " ".join([text for (_, text, _) in result])
+                
+                os.remove(roi_path)
+                return texto
+    except Exception as e:
+        print(f"Error al procesar ROI: {e}")
+        return None
+
+def extract_text_by_page(pdf_path):
+    try:
+        doc = fitz.open(pdf_path)
+        pages = []
+        for page_num in range(len(doc)):
+            page = doc[page_num]
+            page_text = page.get_text()
+            pages.append({"pagina": page_num + 1, "texto": page_text})
+        return pages
+    except Exception as e:
+        print(f"Error al extraer texto por página del PDF {pdf_path}: {e}")
+        return None
+
+def is_pdf_document(pdf_path):
+    try:
+        doc = fitz.open(pdf_path)
+        text = doc[0].get_text()
+        return len(text) > 100
+    except Exception as e:
+        print(f"Error al determinar el tipo de PDF: {e}")
+        return False
+
+def indexar_en_elasticsearch_por_pagina(pdf_path, tipo, codigo_entregable, disciplina, texto_por_pagina):
+    for pagina_data in texto_por_pagina:
+        pagina = pagina_data["pagina"]
+        texto = pagina_data["texto"]
+
+        doc = {
+            "codigo_entregable": codigo_entregable,
+            "disciplina": disciplina,
+            "tipo": tipo,
+            "pagina": pagina,
+            "texto": texto,
+            "ruta_pdf": pdf_path
+        }
+
+        doc_id = f"{codigo_entregable}_pagina_{pagina}"
+
+        try:
+            es.index(index="pdf_documents", id=doc_id, document=doc)
+            print(f"Página {pagina} del documento {codigo_entregable} indexada correctamente.")
+        except Exception as e:
+            print(f"Error al indexar página {pagina} de {codigo_entregable}: {e}")
 
 class TableStatePDF(rx.State):
     upload_success: bool = False
@@ -100,7 +188,7 @@ class TableStatePDF(rx.State):
             ),
             spacing="2",
         )
-    
+
     def buscar_entregable_por_codigo(self, codigo: str):
         """Busca un entregable por su código y devuelve sus datos si existe"""
         with get_session() as session:
@@ -361,6 +449,33 @@ class TableStatePDF(rx.State):
                 archivo_final_pdf = os.path.join(ruta_final, f"{nombre_base}{extension_pdf}")
                 os.rename(self.uploaded_file_path, archivo_final_pdf)
                 print(f"PDF renombrado y movido a: {archivo_final_pdf}")
+                
+                # Procesar el PDF para Elasticsearch
+                if is_pdf_document(archivo_final_pdf):
+                    # Es un documento, extraer texto por páginas
+                    texto_por_pagina = extract_text_by_page(archivo_final_pdf)
+                    if texto_por_pagina:
+                        indexar_en_elasticsearch_por_pagina(
+                            archivo_final_pdf,
+                            "documento",
+                            self.codigo_entregable,
+                            self.disciplina,
+                            texto_por_pagina
+                        )
+                else:
+                    # Es un plano, procesar con YOLO y OCR
+                    imagen_path = pdf_a_imagen(archivo_final_pdf)
+                    if imagen_path:
+                        texto = detectar_roi_y_extraer_texto(imagen_path, modelo_yolo)
+                        if texto:
+                            indexar_en_elasticsearch_por_pagina(
+                                archivo_final_pdf,
+                                "plano",
+                                self.codigo_entregable,
+                                self.disciplina,
+                                [{"pagina": 1, "texto": texto}]
+                            )
+                        os.remove(imagen_path)
             
             if self.has_original:
                 extension_original = os.path.splitext(self.uploaded_file_original)[1]
@@ -392,8 +507,6 @@ class TableStatePDF(rx.State):
                     # Actualizar otros campos
                     entregable_existente.nombre_entregable = self.nombre_entregable
                     entregable_existente.total_hh = float(self.total_hh) if self.total_hh else None
-                    # entregable_existente.codigo_proyecto_entregables = self.codigo_proyecto
-                    # entregable_existente.disciplina_entregables = self.disciplina
                     entregable_existente.clasificacion_entregable = self.clasificacion_entregable
                     entregable_existente.tipo_entregable_entre = self.tipo_entregable
                 else:

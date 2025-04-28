@@ -57,72 +57,6 @@ class TableState(rx.State):
     elasticsearch_loading: bool = False
     elasticsearch_error: str = ""
 
-    async def test_elasticsearch_connection(self):
-        """Método para probar la conexión con Elasticsearch con término estático"""
-        self.elasticsearch_loading = True
-        self.elasticsearch_error = ""
-        self.elasticsearch_results = []
-        
-        try:
-            if not es.ping():
-                raise ConnectionError("No se puede conectar a Elasticsearch")
-
-            # Búsqueda estática con "cianuro"
-            query = {
-                "query": {
-                    "match": {
-                        "texto": {
-                            "query": "cianuro",
-                            "operator": "and"
-                        }
-                    }
-                },
-                "highlight": {
-                    "fields": {
-                        "texto": {
-                            "fragment_size": 150,
-                            "number_of_fragments": 1,
-                            "pre_tags": ["<mark>"],
-                            "post_tags": ["</mark>"]
-                        }
-                    }
-                },
-                "_source": ["codigo_entregable", "pagina", "texto", "ruta_pdf"],
-                "size": 10
-            }
-            
-            response = es.search(index="pdf_documents", body=query)
-            hits = response['hits']['hits']
-            
-            results = []
-            for hit in hits:
-                source = hit['_source']
-                highlight = hit.get('highlight', {}).get('texto', [''])[0]
-                
-                ruta_pdf = source.get('ruta_pdf', '')
-                if ruta_pdf:
-                    ruta_normalizada = ruta_pdf.replace('\\', '/')
-                    if ruta_normalizada.startswith('C:/Users/Leo/COBRA PERU S.A/'):
-                        ruta_normalizada = ruta_normalizada[len('C:/Users/Leo/COBRA PERU S.A/'):]
-                    enlace = f"http://localhost:8011/{ruta_normalizada}"
-                else:
-                    enlace = "#"
-                
-                results.append({
-                    "codigo": source.get('codigo_entregable', 'N/A'),
-                    "pagina": str(source.get('pagina', 'N/A')),
-                    "texto": source.get('texto', '')[:200] + '...',
-                    "highlight": highlight,
-                    "enlace": enlace
-                })
-            
-            self.elasticsearch_results = results
-            
-        except Exception as e:
-            self.elasticsearch_error = f"Error en prueba estática: {str(e)}"
-        finally:
-            self.elasticsearch_loading = False
-    
     async def perform_search(self, search_term: str):
         """Realiza la búsqueda dinámica en Elasticsearch"""
         self.elasticsearch_loading = True
@@ -171,9 +105,22 @@ class TableState(rx.State):
                 ruta_pdf = source.get('ruta_pdf', '')
                 if ruta_pdf:
                     ruta_normalizada = ruta_pdf.replace('\\', '/')
-                    if ruta_normalizada.startswith('C:/Users/Leo/COBRA PERU S.A/'):
-                        ruta_normalizada = ruta_normalizada[len('C:/Users/Leo/COBRA PERU S.A/'):]
-                    enlace = f"http://localhost:8011/{ruta_normalizada}"
+                    # Aquí aplicamos el reemplazo del path
+                    ruta_normalizada = ruta_normalizada.replace(
+                            f'C:/Users/Leo/BISA/BD Entregables',
+                            f'Base_de_datos_Ingenieria - Documentos/General'
+                        )
+                    ruta_normalizada = ruta_normalizada.replace(
+                            f'C:/Users/Leo/COBRA PERU S.A',
+                            f''
+                        )
+                    
+                    # Construir URL con parámetros de búsqueda
+                    page_num = source.get('pagina', 1)
+                    enlace = (
+                        f"http://localhost:8011/{ruta_normalizada}"
+                        f"#search={search_term}&page={page_num}"
+                    )
                 else:
                     enlace = "#"
                 
@@ -182,7 +129,9 @@ class TableState(rx.State):
                     "pagina": str(source.get('pagina', 'N/A')),
                     "texto": source.get('texto', '')[:200] + '...',
                     "highlight": highlight,
-                    "enlace": enlace
+                    "enlace": enlace,
+                    "search_term": search_term,
+                    "page_num": source.get('pagina', 1)
                 })
             
             self.elasticsearch_results = results
@@ -191,40 +140,6 @@ class TableState(rx.State):
             self.elasticsearch_error = f"Error en búsqueda: {str(e)}"
         finally:
             self.elasticsearch_loading = False
-    
-    def _build_query(self, search_term: str) -> dict:
-        """Construye el query compatible con ES"""
-        return {
-            "query": {
-                "multi_match": {
-                    "query": search_term,
-                    "fields": ["texto", "codigo_entregable^3"],
-                    "operator": "and"
-                }
-            },
-            "highlight": {
-                "fields": {
-                    "texto": {
-                        "fragment_size": 150,
-                        "number_of_fragments": 1
-                    }
-                }
-            },
-            "size": 5
-        }
-    
-    def _process_response(self, response):
-        """Procesa la respuesta de ES"""
-        self.elasticsearch_results = [
-            {
-                "codigo": hit["_source"].get("codigo_entregable", "N/A"),
-                "pagina": hit["_source"].get("pagina", "N/A"),
-                "texto": hit["_source"].get("texto", "")[:200] + "...",
-                "highlight": hit.get("highlight", {}).get("texto", [""])[0],
-                "enlace": f"http://localhost:8011/{hit['_source'].get('pdf_path', '').replace('\\', '/')}"
-            }
-            for hit in response["hits"]["hits"]
-        ]
     
     def reset_upload_state_entregables(self):
         """Restablece el estado de la subida de archivo y redirige."""
