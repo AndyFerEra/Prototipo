@@ -1,85 +1,91 @@
 import reflex as rx
+
 from ..backend.table_state import TableState
 from ..templates import template
-from ..views.excel_viewer import excel_viewer
+from ..views.table import file_upload
+from ..views.table_reglas import file_upload_reglas
+from ..views.table_proyectos import file_upload_proyectos
+from ..views.table_entregables_2 import file_upload_entregables
 
 @template(route="/agregar", title="Agregar Datos")
 def agregar() -> rx.Component:
     return rx.vstack(
         rx.hstack(
-            rx.heading("Subir un nuevo Excel de datos", size="5"),
+            rx.heading("Subir un nuevo excel de datos", size="5"),
             rx.button(
                 "REGRESAR",
                 on_click=rx.redirect("/"),  
+                color_scheme="blue",
+                variant="solid",
+                size="2",
+            ),
+            spacing="9",  
+            align_items="center",
+        ),
+        file_upload(),
+        spacing="2",
+        width="100%",
+    )
+
+try:
+    @template(route="/agregarEntregables", title="Agregar Entregables")
+    def agregarEntregables() -> rx.Component:
+        return rx.vstack(
+            rx.hstack(
+                rx.heading("Subir el excel de datos para los entregables", size="5"),
+                rx.button(
+                    "REGRESAR",
+                    on_click=TableState.reset_upload_state_entregables,
+                    color_scheme="blue",
+                    variant="solid",
+                    size="2", 
+                ),
+                spacing="9",  
+                align_items="center",
+            ),
+            file_upload_entregables(),
+            spacing="2",
+            width="100%",
+        )
+except Exception as e:
+    print(f"An error occurred: {e}")
+
+@template(route="/agregarReglas", title="Agregar Reglas")
+def agregarReglas() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Subir el excel de datos de las REGLAS", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/reglas"),  
                 color_scheme="blue",
                 variant="solid",
                 size="2", 
             ),
             spacing="9",  
             align_items="center",
-            width="100%",
         ),
-        
-        rx.card(
-            rx.vstack(
-                rx.upload(
-                    rx.vstack(
-                        rx.icon("file_archive", size=40, color="green"),
-                        rx.text("Arrastra y suelta tu archivo Excel aquí o haz clic para seleccionar"),
-                    ),
-                    border="1px dashed #ccc",
-                    padding="2rem",
-                    border_radius="md",
-                    id="excel_upload",
-                    accept={"application/vnd.ms-excel": [".xls", ".xlsx"]},
-                    max_files=1,
-                ),
-                rx.button(
-                    "Procesar Excel",
-                    on_click=TableState.handle_upload(rx.upload_files(upload_id="excel_upload")),
-                    color_scheme="green",
-                    variant="solid",
-                    margin_top="1em",
-                ),
-                rx.cond(
-                    TableState.upload_success,
-                    rx.text(f"Archivo {TableState.uploaded_file_name} cargado correctamente", color="green"),
-                    rx.text(""),
-                ),
-                spacing="2",
-                width="100%",
-                align_items="center",
-                padding="1em",
-            ),
-            width="100%",
-        ),
-        
-        # Vista previa del cargado
-        rx.cond(
-            TableState.excel_data,
-            rx.vstack(
-                rx.heading("Vista previa del Excel", size="4"),
-                excel_viewer(TableState.excel_data, TableState.excel_columns),
-                spacing="4",
-                width="100%",
-            ),
-            rx.text(""),
-        ),
-        
-        # Botón para ver todos
-        rx.cond(
-            TableState.upload_success,
-            rx.button(
-                "Ver todos los archivos Excel",
-                on_click=rx.redirect("/visualizar-excel"),
-                color_scheme="green",
-                variant="solid",
-                margin_top="1em",
-            ),
-            rx.text(""),
-        ),
-        
-        spacing="4",
+        file_upload_reglas(),
+        spacing="2",
         width="100%",
-        padding="1em",
+    )
+
+@template(route="/agregarProyectos", title="Agregar Proyectos")
+def agregarProyectos() -> rx.Component:
+    return rx.vstack(
+        rx.hstack(
+            rx.heading("Subir el excel de datos para los proyectos", size="5"),
+            rx.button(
+                "REGRESAR",
+                on_click=rx.redirect("/proyectos"),  
+                color_scheme="blue",
+                variant="solid",
+                size="2", 
+            ),
+            spacing="9",  
+            align_items="center",
+        ),
+        file_upload_proyectos(),
+        spacing="2",
+        width="100%",
     )
