@@ -12,7 +12,9 @@ from ultralytics import YOLO
 # Cargar el tokenizer y el modelo BERT preentrenado
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 bert_model = BertModel.from_pretrained('bert-base-uncased')
-modelo = YOLO("./Paraprobar/backend/modelos/best.pt")
+# Corregir la ruta al modelo
+modelo_path = os.path.abspath("Paraprobar/backend/modelos/best.pt")
+modelo = YOLO(modelo_path)
 
 # Cargar los modelos guardados
 print("Cargando modelos...")

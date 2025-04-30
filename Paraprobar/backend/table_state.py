@@ -217,7 +217,7 @@ class TableState(rx.State):
                 if any(#Esto es para lo que nos permite buscar en el input de busqueda
                     search_value in str(getattr(item, attr)).lower()
                     for attr in [
-                        "codigo_proyecto_entregables", # Codigo Pry
+                        "codigo_entregable", # Codigo Pry
                         "nombre_entregable", # Nombre Entrgbl
                     ]
                 )
