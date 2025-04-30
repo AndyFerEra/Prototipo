@@ -28,7 +28,7 @@ def sidebar_item(text: str, url: str) -> rx.Component:
         rx.hstack(
             rx.match(
                 text,
-                ("Dashboard", sidebar_item_icon("layout-dashboard")),
+                ("Entregables", sidebar_item_icon("layers")),
                 ("About", sidebar_item_icon("book-open")),
                 ("Settings", sidebar_item_icon("settings")),
                 sidebar_item_icon("layout-dashboard"),
@@ -84,8 +84,8 @@ def sidebar() -> rx.Component:
     # Las rutas de las páginas ordenadas.
     ordered_page_routes = [
         "/",
-        "/about",
-        "/settings",
+        "/proyectos",
+        "/reglas",
     ]
     # Obtener las páginas decoradas.
     pages = get_decorated_pages()
@@ -101,27 +101,9 @@ def sidebar() -> rx.Component:
     )
 
     return rx.flex(
-        rx.vstack(
-            
-            rx.vstack(
-                *[
-                    sidebar_item(
-                        text=page.get("title", page["route"].strip("/").capitalize()),
-                        url=page["route"],
-                    )
-                    for page in ordered_pages
-                ],
-                spacing="1",
-                width="100%",
-            ),
-            rx.spacer(),
-            justify="end",
-            align="end",
-            width=styles.sidebar_content_width,
-            height="100dvh",
-            padding="1em",
-        ),
-        display=["none", "none", "none", "none", "none", "flex"],
+        
+        #display=["none", "none", "none", "none", "none", "flex"],
+        display="flex",
         max_width=styles.sidebar_width,
         width="auto",
         height="100%",
@@ -130,5 +112,5 @@ def sidebar() -> rx.Component:
         top="0px",
         left="0px",
         flex="1",
-        bg=rx.color("red", 2),
+        bg=rx.color("green", 2),
     )
