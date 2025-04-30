@@ -1,0 +1,8 @@
+transformers
+PyMuPDF
+python-multipart
+opencv-python-headless
+easyocr
+numpy
+ultralytics
+scikit-learn

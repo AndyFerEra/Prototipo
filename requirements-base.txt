@@ -1,0 +1,7 @@
+reflex==0.3.6
+sqlmodel
+python-dotenv
+supabase
+psycopg2-binary
+PyPDF2
+pandas
