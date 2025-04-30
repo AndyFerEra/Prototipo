@@ -71,8 +71,13 @@ color_picker_style = {
 
 base_stylesheets = [
     "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    "https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.css",
 ]
 
 base_style = {
     "font_family": "Inter",
 }
+
+base_scripts = [
+    "https://cdn.jsdelivr.net/npm/handsontable/dist/handsontable.full.min.js",
+]
