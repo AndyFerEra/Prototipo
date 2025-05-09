@@ -60,20 +60,12 @@ def lafeeeeeeeeeeeee():
         statement = select(vistaentregablesproyectos)
         results = session.exec(statement)
         return results.all()
-        
-def get_unique_codigo_proyectos():
-    """Obtiene una lista de códigos de proyecto únicos de la base de datos."""
-    with Session(engine) as session:
-        statement = select(Entregables.disciplina_entregables).distinct()  # Selecciona solo valores únicos
-        results = session.execute(statement)
-        return [row[0] for row in results]
-    
 
 def get_unique_values_by_column(column_name):
     """Obtiene una lista de valores únicos de la base de datos filtrados por una columna específica."""
     with Session(engine) as session:
         statement = (
-            select(getattr(Entregables, column_name))
+            select(getattr(vistaentregablesproyectos, column_name))
             .distinct()  # Selecciona solo valores únicos
         )
         results = session.execute(statement)

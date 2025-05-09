@@ -3,12 +3,6 @@ import reflex as rx
 from typing import Optional
 from datetime import datetime
 
-class User(rx.Model, table=True):
-    id: Optional [int] = Field(default=None, primary_key=True)
-    nombre: str
-    edad: int
-    email: str
-
 #prueba
 class ExcelData(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
@@ -89,3 +83,15 @@ class vistaentregablesproyectos(SQLModel, table=True):
     enlace_nativo: str
     cliente: str
     nombre_proyecto: str
+
+class MetadatosPDF(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    archivo: str
+    titulo: Optional[str] = None
+    autor: Optional[str] = None
+    asunto: Optional[str] = None
+    palabras_clave: Optional[str] = None
+    creador: Optional[str] = None
+    fecha_creacion: Optional[str] = None
+    fecha_modificacion: Optional[str] = None
+    numero_paginas: Optional[int] = None

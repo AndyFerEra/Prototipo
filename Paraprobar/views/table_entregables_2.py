@@ -7,29 +7,40 @@ import os
 # Obtener el nombre de usuario de la PC
 USER_NAME = os.getlogin()
 
-#personalizacion del encabezado de tabla
-def _header_cell(text: str, icon: str = None, options: list[str] = None) -> rx.Component:
-    # Asegurar que options sea una lista (vacía si es None)
+def _header_cell(text: str, icon: str = None, options: list[str] = None, style: dict = None) -> rx.Component:
     options = [] if options is None else options
+    style = style or {}
 
     children = [rx.icon(icon, size=18)] if icon else []
     children.append(rx.text(text))
+
+    # Función para manejar el cambio en el select
+    def handle_filter_change(value: str):
+        return TableState.set_filter(text, value)
 
     return rx.table.column_header_cell(
         rx.hstack(
             *children,
             rx.cond(
-                options,  # Solo muestra el select si hay opciones
+                options,
                 rx.select(
-                    options,  # Aquí options siempre será una lista válida
-                    on_change=lambda value: TableState.set_filter(text, value),
+                    # Añadimos placeholder y manejamos el valor actual
+                    options,
+                    
+                    on_change=handle_filter_change,
+                    value=rx.cond(
+                        TableState.filters.get(text) == "",
+                        "",
+                        TableState.filters.get(text, "")
+                    ),
                     width="0px 0px 10px 0px",
                 ),
-                rx.box()  # Si no hay opciones, coloca un elemento vacío
+                rx.box()
             ),
             align_items="center",
             spacing="0",
         ),
+        style=style
     )
 
 def _show_item_entregables(item: vistaentregablesproyectos, index: int) -> rx.Component:
@@ -216,36 +227,27 @@ def file_upload_entregables() -> rx.Component:
 def main_table_2() -> rx.Component:
     
     return rx.box(
-        #ordenar mayor menor y busqueda y boton de descarga
+        # Controles superiores (se mantiene igual)
         rx.flex(
-            #ordenar mayor menor y busqueda 
             rx.flex(
-                # Input de búsqueda unificado que filtrará tanto la tabla como Elasticsearch
                 rx.input(
                     rx.input.slot(rx.icon("search")),
                     rx.input.slot(
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=lambda: [
-                            TableState.set_search_value_entregables(""),
-                            TableState.perform_search("")
-                        ],
+                        on_click=lambda: TableState.set_search_value_entregables(""),
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
                     value=TableState.search_value_entregables,
-                    placeholder="Buscar...",
-                    on_change=lambda value: [
-                        TableState.set_search_value_entregables(value),
-                        TableState.perform_search(value)
-                    ],
+                    placeholder="Buscar por entregables",
+                    on_change=TableState.set_search_value_entregables,
                     width="100%",
                 ),
                 align="center",
                 justify="end",
                 spacing="3",
             ),
-            # nuevo botón de descarga de plantilla
             rx.button(
                 rx.icon("arrow-down-to-line", size=20),
                 "Descargar Plantilla",
@@ -254,7 +256,6 @@ def main_table_2() -> rx.Component:
                 cursor="pointer",
                 on_click=rx.download(url="/prueba.xlsx"),
             ),
-            #boton de descarga
             rx.button(
                 rx.icon("square-plus", size=20),
                 "Agregar",
@@ -271,33 +272,49 @@ def main_table_2() -> rx.Component:
             width="100%",
             padding_bottom="1em",
         ),
-        rx.table.root(
-            rx.table.header(
-                rx.table.row(
-                    _header_cell("ID", "hash"),
-                    _header_cell("Cod Pry", options=TableState.unique_codigo_proyectos_cod_pry),
-                    _header_cell("Cliente"),
-                    _header_cell("Proyecto"),
-                    _header_cell("Disciplina",  options=TableState.unique_codigo_proyectos_disciplina),
-                    _header_cell("Tipo Entrgbl",  options=TableState.unique_codigo_proyectos_tip_entre),
-                    _header_cell("Codigo Entrgbl"),
-                    _header_cell("Nombre Entrgbl"),
-                    _header_cell("HH Venta"),
-                    _header_cell("PDF", "file-text"),
-                    _header_cell("Editable", "pencil-line"),
+
+        # Contenedor principal con scroll horizontal
+        rx.box(
+            # Tabla con ancho fijo
+            rx.box(
+                rx.table.root(
+                    rx.table.header(
+                        rx.table.row(
+                            _header_cell("ID"),
+                            _header_cell("Cod Pry", options=TableState.unique_codigo_proyectos_cod_pry),
+                            _header_cell("Cliente", options=TableState.unique_codigo_proyectos_cliente),
+                            _header_cell("Proyecto", options=TableState.unique_codigo_proyectos_nom_proy),
+                            _header_cell("Disciplina", options=TableState.unique_codigo_proyectos_disciplina),
+                            _header_cell("Tipo Entrgbl", options=TableState.unique_codigo_proyectos_tip_entre),
+                            _header_cell("Codigo Entrgbl"),
+                            _header_cell("Nombre Entrgbl"),
+                            _header_cell("HH Venta"),
+                            _header_cell("PDF", "file-text"),
+                            _header_cell("Editable"),
+                        ),
+                    ),
+                    rx.table.body(
+                        rx.foreach(
+                            TableState.get_current_page_entregables,
+                            lambda item, index: _show_item_entregables(item, index),
+                        ),
+                        style={"fontSize": "0.9rem"}
+                    ),
+                    variant="surface",
+                    size="3",
+                    width="max-content",  # Ancho según contenido
+                    min_width="100%",     # Mínimo ancho del contenedor
                 ),
             ),
-            rx.table.body( 
-                rx.foreach(
-                    TableState.get_current_page_entregables,
-                    lambda item, index: _show_item_entregables(item, index),
-                ),
-                style={"fontSize": "0.9rem"}
-            ),
-            variant="surface",
-            size="3",
-            width="100%",
+            overflow_x="auto",
+            max_height="70vh",          # Altura máxima
+            border="1px solid #e2e8f0",
+            borderRadius="lg",
+            padding="1px",
+            id="scroll-container",
         ),
+
+        # Paginación
         _pagination_view(),
         
         # Sección de resultados de búsqueda dinámica

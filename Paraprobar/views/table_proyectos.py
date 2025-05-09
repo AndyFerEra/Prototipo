@@ -246,7 +246,7 @@ def main_table() -> rx.Component:
             ),
             rx.table.body( 
                 rx.foreach(
-                    TableState.get_current_page_proyectos,
+                    TableState.get_current_page_proyectosA,
                     lambda item, index: _show_item_proyectos(item, index),
                 ),
                 style={"fontSize": "0.9rem"}
