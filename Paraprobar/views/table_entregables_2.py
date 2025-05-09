@@ -214,24 +214,31 @@ def file_upload_entregables() -> rx.Component:
         print(f"An error occurred: {e}")
 
 def main_table_2() -> rx.Component:
+    
     return rx.box(
         #ordenar mayor menor y busqueda y boton de descarga
         rx.flex(
             #ordenar mayor menor y busqueda 
             rx.flex(
-                #todo pa buscar
+                # Input de búsqueda unificado que filtrará tanto la tabla como Elasticsearch
                 rx.input(
                     rx.input.slot(rx.icon("search")),
                     rx.input.slot(
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=lambda: TableState.set_search_value_entregables(""),  # Limpiar búsqueda
+                        on_click=lambda: [
+                            TableState.set_search_value_entregables(""),
+                            TableState.perform_search("")
+                        ],
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
                     value=TableState.search_value_entregables,
-                    placeholder="Buscar por entregables",
-                    on_change=TableState.set_search_value_entregables,  # Actualizar al escribir
+                    placeholder="Buscar...",
+                    on_change=lambda value: [
+                        TableState.set_search_value_entregables(value),
+                        TableState.perform_search(value)
+                    ],
                     width="100%",
                 ),
                 align="center",
@@ -292,5 +299,152 @@ def main_table_2() -> rx.Component:
             width="100%",
         ),
         _pagination_view(),
-        width="100%",
+        
+        # Sección de resultados de búsqueda dinámica
+        rx.box(
+            rx.cond(
+                TableState.search_value_entregables != "",
+                rx.vstack(
+                    rx.heading(
+                        "Resultados en contenido de entregables", 
+                        size="6",
+                        color="slate.800",
+                        font_weight="semibold",
+                        padding_bottom="0.5em"
+                    ),
+                    rx.box(
+                        rx.text(
+                            f"Búsqueda: '{TableState.search_value_entregables}'", 
+                            size="2", 
+                            color="slate.500",
+                            font_style="italic"
+                        ),
+                        padding_bottom="1em"
+                    ),
+                    rx.divider(border_color="slate.200"),
+                    
+                    rx.cond(
+                        TableState.elasticsearch_loading,
+                        rx.center(
+                            rx.spinner(
+                                size="3",
+                                color="blue.500",
+                                thickness="3px",
+                                speed="1s"
+                            ), 
+                            padding="6"
+                        ),
+                        
+                        rx.box(
+                            rx.cond(
+                                TableState.elasticsearch_error,
+                                rx.callout(
+                                    TableState.elasticsearch_error,
+                                    icon="alert-triangle",
+                                    color_scheme="red",
+                                    width="100%",
+                                    variant="soft",
+                                    margin_bottom="1em"
+                                ),
+                                rx.fragment()
+                            ),
+                            
+                            rx.cond(
+                                TableState.elasticsearch_results.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(
+                                        TableState.elasticsearch_results,
+                                        lambda item: rx.card(
+                                            rx.vstack(
+                                                rx.hstack(
+                                                    rx.badge(
+                                                        "Código de Entregable:",
+                                                        color_scheme="blue",
+                                                        variant="soft"
+                                                    ),
+                                                    rx.text(
+                                                        item["codigo"],
+                                                        weight="medium"
+                                                    ),
+                                                    rx.badge(
+                                                        "Página:",
+                                                        color_scheme="blue",
+                                                        variant="soft"
+                                                    ),
+                                                    rx.text(
+                                                        item["pagina"],
+                                                        weight="medium"
+                                                    ),
+                                                    spacing="3",
+                                                    align="center"
+                                                ),
+                                                rx.divider(border_color="slate.100"),
+                                                rx.box(
+                                                    rx.cond(
+                                                        item["highlight"],
+                                                        rx.html(
+                                                            item["highlight"],
+                                                            style={
+                                                                "line-height": "1.5",
+                                                                "font-size": "0.9em"
+                                                            }
+                                                        ),
+                                                        rx.text(
+                                                            item["texto"], 
+                                                            color="slate.600",
+                                                            size="2"
+                                                        )
+                                                    ),
+                                                    padding="3",
+                                                    bg="slate.50",
+                                                    border_radius="lg",
+                                                ),
+                                                rx.link(
+                                                    rx.button(
+                                                        rx.text("Ver PDF en página "), 
+                                                        rx.text(item["pagina"]),
+                                                        size="2",
+                                                        variant="solid",
+                                                        color_scheme="blue",
+                                                        right_icon="arrow-up-right"
+                                                    ),
+                                                    href=item["enlace"],
+                                                    is_external=True
+                                                ),
+                                                spacing="3",
+                                                padding="0.5em"
+                                            ),
+                                            width="100%",
+                                            margin_bottom="1.5em",
+                                            box_shadow="sm",
+                                            _hover={
+                                                "box_shadow": "md",
+                                                "transform": "translateY(-2px)",
+                                                "transition": "all 0.2s"
+                                            }
+                                        )
+                                    ),
+                                    spacing="3",  # El spacing debe estar en el vstack que contiene el foreach
+                                    width="100%",
+                                    padding_top="0.5em"
+                                ),
+                                
+                                rx.callout(
+                                    "No se encontraron resultados para esta búsqueda",
+                                    icon="info",
+                                    color_scheme="blue",
+                                    variant="soft",
+                                    width="100%"
+                                )
+                            )
+                        )
+                    ),
+                    spacing="4",
+                    width="100%"
+                )
+            ),
+            margin_top="2.5em",
+            padding_x="1em",
+            width="100%"
+        )
     )

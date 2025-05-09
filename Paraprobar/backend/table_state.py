@@ -1,4 +1,5 @@
-import csv
+from elasticsearch import Elasticsearch, AsyncElasticsearch
+import asyncio
 from pathlib import Path
 from typing import List
 import pandas as pd
@@ -10,8 +11,7 @@ import time
 import reflex as rx
 from elasticsearch import Elasticsearch
 
-# Agrega esto al inicio del archivo
-es = Elasticsearch("http://localhost:9200")
+es = Elasticsearch("http://192.168.18.11:9200")
 
 class TableState(rx.State):
     """La clase State."""
@@ -101,6 +101,94 @@ class TableState(rx.State):
     def refresh(self):
         """Método para actualizar la tabla."""
         self.dirty += 1  # Esto forzará un refresco de la tabla
+    # Estados para Elasticsearch
+    elasticsearch_results: list[dict] = []
+    elasticsearch_loading: bool = False
+    elasticsearch_error: str = ""
+
+    async def perform_search(self, search_term: str):
+        """Realiza la búsqueda dinámica en Elasticsearch"""
+        self.elasticsearch_loading = True
+        self.elasticsearch_error = ""
+        self.elasticsearch_results = []
+        
+        try:
+            if not search_term.strip():
+                self.elasticsearch_loading = False
+                return
+
+            if not es.ping():
+                raise ConnectionError("No se puede conectar a Elasticsearch")
+
+            query = {
+                "query": {
+                    "match": {
+                        "texto": {
+                            "query": search_term,
+                            "operator": "and"
+                        }
+                    }
+                },
+                "highlight": {
+                    "fields": {
+                        "texto": {
+                            "fragment_size": 150,
+                            "number_of_fragments": 1,
+                            "pre_tags": ["<mark>"],
+                            "post_tags": ["</mark>"]
+                        }
+                    }
+                },
+                "_source": ["codigo_entregable", "pagina", "texto", "ruta_pdf"],
+                "size": 10
+            }
+            
+            response = es.search(index="pdf_documents", body=query)
+            hits = response['hits']['hits']
+            
+            results = []
+            for hit in hits:
+                source = hit['_source']
+                highlight = hit.get('highlight', {}).get('texto', [''])[0]
+                
+                ruta_pdf = source.get('ruta_pdf', '')
+                if ruta_pdf:
+                    ruta_normalizada = ruta_pdf.replace('\\', '/')
+                    # Aquí aplicamos el reemplazo del path
+                    ruta_normalizada = ruta_normalizada.replace(
+                            f'D:/Users/Leo/BISA/BD Entregables',
+                            f'Base_de_datos_Ingenieria - Documentos/General'
+                        )
+                    ruta_normalizada = ruta_normalizada.replace(
+                            f'D:/Users/Leo/COBRA PERU S.A',
+                            f''
+                        )
+                    
+                    # Construir URL con parámetros de búsqueda
+                    page_num = source.get('pagina', 1)
+                    enlace = (
+                        f"http://localhost:8011/{ruta_normalizada}"
+                        f"#search={search_term}&page={page_num}"
+                    )
+                else:
+                    enlace = "#"
+                
+                results.append({
+                    "codigo": source.get('codigo_entregable', 'N/A'),
+                    "pagina": str(source.get('pagina', 'N/A')),
+                    "texto": source.get('texto', '')[:200] + '...',
+                    "highlight": highlight,
+                    "enlace": enlace,
+                    "search_term": search_term,
+                    "page_num": source.get('pagina', 1)
+                })
+            
+            self.elasticsearch_results = results
+            
+        except Exception as e:
+            self.elasticsearch_error = f"Error en búsqueda: {str(e)}"
+        finally:
+            self.elasticsearch_loading = False
     
     def reset_upload_state_entregables(self):
         """Restablece el estado de la subida de archivo y redirige."""
