@@ -12,7 +12,7 @@ import time
 import reflex as rx
 from elasticsearch import Elasticsearch
 
-es = Elasticsearch("http://localhost:9200")
+es = Elasticsearch("http://192.168.18.11:9200")
 
 class Item(rx.Base):
     """La clase Item."""
@@ -107,11 +107,11 @@ class TableState(rx.State):
                     ruta_normalizada = ruta_pdf.replace('\\', '/')
                     # Aquí aplicamos el reemplazo del path
                     ruta_normalizada = ruta_normalizada.replace(
-                            f'C:/Users/Leo/BISA/BD Entregables',
+                            f'D:/Users/Leo/BISA/BD Entregables',
                             f'Base_de_datos_Ingenieria - Documentos/General'
                         )
                     ruta_normalizada = ruta_normalizada.replace(
-                            f'C:/Users/Leo/COBRA PERU S.A',
+                            f'D:/Users/Leo/COBRA PERU S.A',
                             f''
                         )
                     

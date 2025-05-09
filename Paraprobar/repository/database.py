@@ -25,7 +25,7 @@ password = "uncp@2024"
 encoded_password = quote_plus(password)
 
 # Cadena de conexión
-DATABASE_URL = f"mssql+pyodbc://sa:{encoded_password}@DESKTOP-FJD64AH/proy_bisa?driver=ODBC+Driver+17+for+SQL+Server"
+DATABASE_URL = f"mssql+pyodbc://sa:{encoded_password}@DESKTOP-3P4VPNP\\SQLEXPRESS/proy_bisa?driver=ODBC+Driver+17+for+SQL+Server"
 engine = create_engine(DATABASE_URL)
 
 # Inicializar la base de datos
