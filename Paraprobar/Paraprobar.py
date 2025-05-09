@@ -3,10 +3,10 @@
 # Import all the pages.
 import reflex as rx
 
-# Importaciones CORRECTAS:
-from Paraprobar import styles  # ¡Usa el nombre del paquete!
-from Paraprobar.pages import *
-from Paraprobar.repository.database import init_db
+from . import styles
+from .pages import *
+
+from .repository.database import init_db
 
 init_db()
 
