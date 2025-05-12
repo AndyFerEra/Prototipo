@@ -11,3 +11,4 @@ Prototipo/Paraprobar/repository/database.py
 assets/external/
 .env
 node_modules/
+elasticsearch_backup.tar

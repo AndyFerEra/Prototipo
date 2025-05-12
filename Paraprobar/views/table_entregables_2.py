@@ -463,5 +463,6 @@ def main_table_2() -> rx.Component:
             margin_top="2.5em",
             padding_x="1em",
             width="100%"
-        )
+        ),
+        width="100%"
     )
