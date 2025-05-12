@@ -11,7 +11,7 @@ import time
 import reflex as rx
 from elasticsearch import Elasticsearch
 
-es = Elasticsearch("http://192.168.18.11:9200")
+es = Elasticsearch("http://localhost:9200")
 
 class TableState(rx.State):
     """La clase State."""
@@ -117,6 +117,7 @@ class TableState(rx.State):
     elasticsearch_error: str = ""
 
     async def perform_search(self, search_term: str):
+        
         """Realiza la búsqueda dinámica en Elasticsearch"""
         self.elasticsearch_loading = True
         self.elasticsearch_error = ""
@@ -165,15 +166,16 @@ class TableState(rx.State):
                 if ruta_pdf:
                     ruta_normalizada = ruta_pdf.replace('\\', '/')
                     # Aquí aplicamos el reemplazo del path
+                    #NO TOCAR PRIMERA RUTA NORMALIZADA
                     ruta_normalizada = ruta_normalizada.replace(
-                            f'D:/Users/Leo/BISA/BD Entregables',
-                            f'Base_de_datos_Ingenieria - Documentos/General'
-                        )
-                    ruta_normalizada = ruta_normalizada.replace(
-                            f'D:/Users/Leo/COBRA PERU S.A',
+                            f'D:/Users/Leo/COBRA PERU S.A/',
                             f''
                         )
-                    
+                    #ESTO CAMBIAR
+                    ruta_normalizada = ruta_normalizada.replace(
+                            f'F:/Users/Usuario/COBRA PERU S.A',
+                            f''
+                        )
                     # Construir URL con parámetros de búsqueda
                     page_num = source.get('pagina', 1)
                     enlace = (

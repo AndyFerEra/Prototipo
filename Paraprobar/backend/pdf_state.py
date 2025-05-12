@@ -33,7 +33,7 @@ def normalizar_valor_con_mapeo(valor, mapeo):
 
 ## ELASTICSEARCH ##
 # Configurar conexión a Elasticsearch (añade esto después de las importaciones)
-es = Elasticsearch("http://192.168.18.11:9200")
+es = Elasticsearch("http://localhost:9200")
 
 def pdf_a_imagen(pdf_path, dpi=300):
     try:
@@ -157,7 +157,7 @@ class TableStatePDF(rx.State):
             rx.html(
                 f"""
                 <div>
-                    <iframe src="http://192.168.18.11:8001/static/uploads/{self.uploaded_file}" 
+                    <iframe src="http://192.168.18.11:8002/static/uploads/{self.uploaded_file}" 
                             width="250%" 
                             height="500px" 
                             style="border: none;"
@@ -425,7 +425,7 @@ class TableStatePDF(rx.State):
         disciplina_modificado = self.disciplina_map.get(self.disciplina, "99GENERAL")
 
         # Construir la ruta final
-        base_dir = r"D:\Users\Leo\COBRA PERU S.A\Base_de_datos_Ingenieria - Documentos\General\BD Entregables"
+        base_dir = r"F:\Users\Usuario\COBRA PERU S.A\Base_de_datos_Ingenieria - Documentos\General\BD Entregables"
         ruta_final = os.path.join(
             base_dir,
             self.codigo_proyecto,

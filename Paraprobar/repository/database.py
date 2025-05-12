@@ -6,7 +6,7 @@ from urllib.parse import quote_plus
 # Codificar la contraseña (por el carácter @)
 password = "12345"
 encoded_password = quote_plus(password)
-
+#===================
 # Cadena de conexión
 DATABASE_URL = rf"mssql+pyodbc://sa:{encoded_password}@DESKTOP-L84HKA8\BISA/pro_bisa?driver=ODBC+Driver+17+for+SQL+Server"
 engine = create_engine(DATABASE_URL)
@@ -15,7 +15,7 @@ engine = create_engine(DATABASE_URL)
 def init_db():
     try:
         SQLModel.metadata.create_all(engine)
-        print("Base de datos inicializada correctamente.")
+        print("Base de datos inicializada correctamente..")
     except Exception as e:
         print(f"Error al inicializar la base de datos: {e}")
 

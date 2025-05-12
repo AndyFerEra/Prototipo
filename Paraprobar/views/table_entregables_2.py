@@ -48,14 +48,11 @@ def _show_item_entregables(item: vistaentregablesproyectos, index: int) -> rx.Co
     # En tu backend, antes de crear los objetos Entregables:
     def safe_path(path):
         # Usar rx.cond para manejar el tipo Var
+        #ESTO SE CAMBIO
         return rx.cond(
             path,
-            "http://localhost:8011/" + 
-            path.replace("C:\\Users\\Leo\\COBRA PERU S.A\\", "")
-                .replace("C:/Users/Leo/COBRA PERU S.A/", "")
-                .replace("\\", "/")
-                .replace("//", "/")
-                .replace("C:/Users/Leo/COBRA PERU S.A/", ""),
+            "http://localhost:8011/" +
+            path.replace("https://cobraperusa.sharepoint.com/sites/Enginuity/Shared Documents/", "Base_de_datos_Ingenieria - Documentos/"),
             None  # Si path es None o no válido
         )
         
@@ -236,12 +233,18 @@ def main_table_2() -> rx.Component:
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=lambda: TableState.set_search_value_entregables(""),
+                        on_click=lambda: [
+                            TableState.set_search_value_entregables(""),
+                            TableState.perform_search("")  # Limpiar la búsqueda también
+                        ],
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
                     value=TableState.search_value_entregables,
                     placeholder="Buscar por entregables",
-                    on_change=TableState.set_search_value_entregables,
+                    on_change=lambda value: [
+                        TableState.set_search_value_entregables(value),
+                        TableState.perform_search(value)
+                    ],
                     width="100%",
                 ),
                 align="center",
