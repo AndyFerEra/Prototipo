@@ -8,9 +8,10 @@ from ..backend.table_state import TableState
 def entregables_2() -> rx.Component:
 
     return rx.vstack(
-        rx.heading("Listado de Entregables", size="7",align="center"),
+        rx.heading("Listado de Entregables", size="7", align="center"),
         # Barra de carga  
         main_table_2(),
         spacing="8",
         width="100%",
+        padding="2",
     )

@@ -62,13 +62,13 @@ def lafeeeeeeeeeeeee():
         return results.all()
 
 def get_unique_values_by_column(column_name):
-    """Obtiene una lista de valores únicos de la base de datos filtrados por una columna específica."""
+    """Obtiene una lista de valores únicos de la base de datos filtrados por una columna específica, ordenados alfabéticamente."""
     with Session(engine) as session:
         statement = (
             select(getattr(vistaentregablesproyectos, column_name))
             .distinct()  # Selecciona solo valores únicos
+            .order_by(asc(getattr(vistaentregablesproyectos, column_name)))  # Ordena alfabéticamente
         )
         results = session.execute(statement)
         return [row[0] for row in results]
 
-    

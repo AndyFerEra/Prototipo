@@ -44,31 +44,29 @@ def _header_cell(text: str, icon: str = None, options: list[str] = None, style: 
     )
 
 def _show_item_entregables(item: vistaentregablesproyectos, index: int) -> rx.Component:
-    # Función segura para generar URLs
-    # En tu backend, antes de crear los objetos Entregables:
     def safe_path(path):
-        # Usar rx.cond para manejar el tipo Var
-        #ESTO SE CAMBIO
         return rx.cond(
             path,
             "http://localhost:8011/" +
             path.replace("https://cobraperusa.sharepoint.com/sites/Enginuity/Shared Documents/", "Base_de_datos_Ingenieria - Documentos/"),
-            None  # Si path es None o no válido
+            None
         )
-        
+
     bg_color = rx.cond(index % 2 == 0, rx.color("gray", 1), rx.color("accent", 2))
     hover_color = rx.cond(index % 2 == 0, rx.color("gray", 3), rx.color("accent", 3))
 
+    padding_style = {"padding": "13px 6px 12px 9px"}
+
     return rx.table.row(
-        rx.table.cell(item.id),
-        rx.table.cell(item.codigo_proyecto_entregables),
-        rx.table.cell(item.cliente),
-        rx.table.cell(item.nombre_proyecto),
-        rx.table.cell(item.disciplina_entregables),
-        rx.table.cell(item.tipo_entregable_entre),
-        rx.table.cell(item.codigo_entregable),
-        rx.table.cell(item.nombre_entregable),
-        rx.table.cell(item.total_hh if item.total_hh is not None else ""),
+        rx.table.cell(item.id, style=padding_style),
+        rx.table.cell(item.codigo_proyecto_entregables, style=padding_style),
+        rx.table.cell(item.cliente, style={**padding_style, "fontSize": "0.7rem"}),
+        rx.table.cell(item.nombre_proyecto, style={**padding_style, "fontSize": "0.7rem"}),
+        rx.table.cell(item.disciplina_entregables, style=padding_style),
+        rx.table.cell(item.tipo_entregable_entre, style=padding_style),
+        rx.table.cell(item.codigo_entregable, style=padding_style),
+        rx.table.cell(item.nombre_entregable, style={**padding_style, "fontSize": "0.9rem"}),
+        rx.table.cell(item.total_hh if item.total_hh is not None else "", style=padding_style),
         rx.table.cell(
             rx.cond(
                 item.enlace_pdf,
@@ -84,14 +82,15 @@ def _show_item_entregables(item: vistaentregablesproyectos, index: int) -> rx.Co
                     style={"color": "green"},
                 ),
                 rx.text("-")
-            )
+            ),
+            style=padding_style,
         ),
         rx.table.cell(
             rx.cond(
                 item.enlace_nativo,
                 rx.link(
                     rx.hstack(
-                        rx.text("ORIGINAL"),
+                        rx.text("ORIGINAL", style={"fontSize": "0.8rem"}),
                         rx.icon("file", size=20),
                         align="center",
                         spacing="1",
@@ -100,12 +99,15 @@ def _show_item_entregables(item: vistaentregablesproyectos, index: int) -> rx.Co
                     target="_blank",
                     style={"color": "blue"},
                 ),
-                rx.text("-")
-            )
+                rx.text("-", style={"fontSize": "0.8rem"})
+            ),
+            style=padding_style,
         ),
         style={"_hover": {"bg": hover_color}, "bg": bg_color},
         align="center",
     )
+
+
 
 #sin decir pa la paginacion
 def _pagination_view() -> rx.Component:
@@ -222,9 +224,8 @@ def file_upload_entregables() -> rx.Component:
         print(f"An error occurred: {e}")
 
 def main_table_2() -> rx.Component:
-    
     return rx.box(
-        # Controles superiores (se mantiene igual)
+        # Controles superiores: búsqueda y botones
         rx.flex(
             rx.flex(
                 rx.input(
@@ -233,18 +234,12 @@ def main_table_2() -> rx.Component:
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=lambda: [
-                            TableState.set_search_value_entregables(""),
-                            TableState.perform_search("")  # Limpiar la búsqueda también
-                        ],
+                        on_click=lambda: TableState.set_search_value_entregables(""),
                         display=rx.cond(TableState.search_value_entregables, "flex", "none"),
                     ),
                     value=TableState.search_value_entregables,
                     placeholder="Buscar por entregables",
-                    on_change=lambda value: [
-                        TableState.set_search_value_entregables(value),
-                        TableState.perform_search(value)
-                    ],
+                    on_change=TableState.set_search_value_entregables,
                     width="100%",
                 ),
                 align="center",
@@ -275,197 +270,40 @@ def main_table_2() -> rx.Component:
             width="100%",
             padding_bottom="1em",
         ),
-
-        # Contenedor principal con scroll horizontal
+        # Tabla con scroll horizontal real
         rx.box(
-            # Tabla con ancho fijo
-            rx.box(
-                rx.table.root(
-                    rx.table.header(
-                        rx.table.row(
-                            _header_cell("ID"),
-                            _header_cell("Cod Pry", options=TableState.unique_codigo_proyectos_cod_pry),
-                            _header_cell("Cliente", options=TableState.unique_codigo_proyectos_cliente),
-                            _header_cell("Proyecto", options=TableState.unique_codigo_proyectos_nom_proy),
-                            _header_cell("Disciplina", options=TableState.unique_codigo_proyectos_disciplina),
-                            _header_cell("Tipo Entrgbl", options=TableState.unique_codigo_proyectos_tip_entre),
-                            _header_cell("Codigo Entrgbl"),
-                            _header_cell("Nombre Entrgbl"),
-                            _header_cell("HH Venta"),
-                            _header_cell("PDF", "file-text"),
-                            _header_cell("Editable"),
-                        ),
+            rx.table.root(
+                
+                rx.table.header(
+                    rx.table.row(
+                        
+                        _header_cell("ID", style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Cod Pry", options=TableState.unique_codigo_proyectos_cod_pry, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Cliente", options=TableState.unique_codigo_proyectos_cliente, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Proyecto", options=TableState.unique_codigo_proyectos_nom_proy, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Disciplina", options=TableState.unique_codigo_proyectos_disciplina, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Tipo Entrgbl", options=TableState.unique_codigo_proyectos_tip_entre, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Codigo Entrgbl", style={"padding": "13px 6px 12px 9px", "paddingRight": "210px"}),  # Se mantiene la personalización
+                        _header_cell("Nombre Entrgbl", style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("HH Venta", style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("PDF", "file-text", style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Editable", style={"padding": "13px 6px 12px 9px"}),
                     ),
-                    rx.table.body(
-                        rx.foreach(
-                            TableState.get_current_page_entregables,
-                            lambda item, index: _show_item_entregables(item, index),
-                        ),
-                        style={"fontSize": "0.9rem"}
-                    ),
-                    variant="surface",
-                    size="3",
-                    width="max-content",  # Ancho según contenido
-                    min_width="100%",     # Mínimo ancho del contenedor
                 ),
+                rx.table.body(
+                    rx.foreach(
+                        TableState.get_current_page_entregables,
+                        lambda item, index: _show_item_entregables(item, index),
+                    ),
+                    style={"fontSize": "0.9rem"}
+                ),
+                variant="surface",
+                size="3",
+                width="100%",
             ),
             overflow_x="auto",
-            max_height="70vh",          # Altura máxima
-            border="1px solid #e2e8f0",
-            borderRadius="lg",
-            padding="1px",
-            id="scroll-container",
+            max_width="100%",
+            id="scroll-bottom",
         ),
-
-        # Paginación
-        _pagination_view(),
-        
-        # Sección de resultados de búsqueda dinámica
-        rx.box(
-            rx.cond(
-                TableState.search_value_entregables != "",
-                rx.vstack(
-                    rx.heading(
-                        "Resultados en contenido de entregables", 
-                        size="6",
-                        color="slate.800",
-                        font_weight="semibold",
-                        padding_bottom="0.5em"
-                    ),
-                    rx.box(
-                        rx.text(
-                            f"Búsqueda: '{TableState.search_value_entregables}'", 
-                            size="2", 
-                            color="slate.500",
-                            font_style="italic"
-                        ),
-                        padding_bottom="1em"
-                    ),
-                    rx.divider(border_color="slate.200"),
-                    
-                    rx.cond(
-                        TableState.elasticsearch_loading,
-                        rx.center(
-                            rx.spinner(
-                                size="3",
-                                color="blue.500",
-                                thickness="3px",
-                                speed="1s"
-                            ), 
-                            padding="6"
-                        ),
-                        
-                        rx.box(
-                            rx.cond(
-                                TableState.elasticsearch_error,
-                                rx.callout(
-                                    TableState.elasticsearch_error,
-                                    icon="alert-triangle",
-                                    color_scheme="red",
-                                    width="100%",
-                                    variant="soft",
-                                    margin_bottom="1em"
-                                ),
-                                rx.fragment()
-                            ),
-                            
-                            rx.cond(
-                                TableState.elasticsearch_results.length() > 0,
-                                rx.vstack(
-                                    rx.foreach(
-                                        TableState.elasticsearch_results,
-                                        lambda item: rx.card(
-                                            rx.vstack(
-                                                rx.hstack(
-                                                    rx.badge(
-                                                        "Código de Entregable:",
-                                                        color_scheme="blue",
-                                                        variant="soft"
-                                                    ),
-                                                    rx.text(
-                                                        item["codigo"],
-                                                        weight="medium"
-                                                    ),
-                                                    rx.badge(
-                                                        "Página:",
-                                                        color_scheme="blue",
-                                                        variant="soft"
-                                                    ),
-                                                    rx.text(
-                                                        item["pagina"],
-                                                        weight="medium"
-                                                    ),
-                                                    spacing="3",
-                                                    align="center"
-                                                ),
-                                                rx.divider(border_color="slate.100"),
-                                                rx.box(
-                                                    rx.cond(
-                                                        item["highlight"],
-                                                        rx.html(
-                                                            item["highlight"],
-                                                            style={
-                                                                "line-height": "1.5",
-                                                                "font-size": "0.9em"
-                                                            }
-                                                        ),
-                                                        rx.text(
-                                                            item["texto"], 
-                                                            color="slate.600",
-                                                            size="2"
-                                                        )
-                                                    ),
-                                                    padding="3",
-                                                    bg="slate.50",
-                                                    border_radius="lg",
-                                                ),
-                                                rx.link(
-                                                    rx.button(
-                                                        rx.text("Ver PDF en página "), 
-                                                        rx.text(item["pagina"]),
-                                                        size="2",
-                                                        variant="solid",
-                                                        color_scheme="blue",
-                                                        right_icon="arrow-up-right"
-                                                    ),
-                                                    href=item["enlace"],
-                                                    is_external=True
-                                                ),
-                                                spacing="3",
-                                                padding="0.5em"
-                                            ),
-                                            width="100%",
-                                            margin_bottom="1.5em",
-                                            box_shadow="sm",
-                                            _hover={
-                                                "box_shadow": "md",
-                                                "transform": "translateY(-2px)",
-                                                "transition": "all 0.2s"
-                                            }
-                                        )
-                                    ),
-                                    spacing="3",  # El spacing debe estar en el vstack que contiene el foreach
-                                    width="100%",
-                                    padding_top="0.5em"
-                                ),
-                                
-                                rx.callout(
-                                    "No se encontraron resultados para esta búsqueda",
-                                    icon="info",
-                                    color_scheme="blue",
-                                    variant="soft",
-                                    width="100%"
-                                )
-                            )
-                        )
-                    ),
-                    spacing="4",
-                    width="100%"
-                )
-            ),
-            margin_top="2.5em",
-            padding_x="1em",
-            width="100%"
-        ),
-        width="100%"
+        width="100%",
     )
