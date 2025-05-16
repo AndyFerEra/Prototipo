@@ -1,8 +1,7 @@
 import reflex as rx
 
-from ..models.excel_data import Reglas
-from ..backend.table_state import TableState
-from ..components.status_badge import status_badge
+from ..models.reglas import Reglas
+from ..backend.reglas_state import ReglasState
 
 #personalizacion del encabezado de tabla
 def _header_cell(text: str, icon: str) -> rx.Component:
@@ -54,33 +53,33 @@ def _pagination_view() -> rx.Component:
         rx.hstack(
             rx.text(
                 "Page ",
-                rx.code(TableState.page_number),
-                f" of {TableState.total_pages}",
+                rx.code(ReglasState.page_number),
+                f" of {ReglasState.total_pages}",
                 justify="end",
             ),
             rx.hstack(
                 rx.icon_button(
                     rx.icon("chevrons-left", size=18),
-                    on_click=TableState.first_page,
-                    opacity=rx.cond(TableState.page_number == 1, 0.6, 1),
-                    color_scheme=rx.cond(TableState.page_number == 1, "gray", "accent"),
+                    on_click=ReglasState.first_page,
+                    opacity=rx.cond(ReglasState.page_number == 1, 0.6, 1),
+                    color_scheme=rx.cond(ReglasState.page_number == 1, "gray", "accent"),
                     variant="soft",
                 ),
                 rx.icon_button(
                     rx.icon("chevron-left", size=18),
-                    on_click=TableState.prev_page,
-                    opacity=rx.cond(TableState.page_number == 1, 0.6, 1),
-                    color_scheme=rx.cond(TableState.page_number == 1, "gray", "accent"),
+                    on_click=ReglasState.prev_page,
+                    opacity=rx.cond(ReglasState.page_number == 1, 0.6, 1),
+                    color_scheme=rx.cond(ReglasState.page_number == 1, "gray", "accent"),
                     variant="soft",
                 ),
                 rx.icon_button(
                     rx.icon("chevron-right", size=18),
-                    on_click=TableState.next_page,
+                    on_click=ReglasState.next_page,
                     opacity=rx.cond(
-                        TableState.page_number == TableState.total_pages, 0.6, 1
+                        ReglasState.page_number == ReglasState.total_pages, 0.6, 1
                     ),
                     color_scheme=rx.cond(
-                        TableState.page_number == TableState.total_pages,
+                        ReglasState.page_number == ReglasState.total_pages,
                         "gray",
                         "accent",
                     ),
@@ -88,12 +87,12 @@ def _pagination_view() -> rx.Component:
                 ),
                 rx.icon_button(
                     rx.icon("chevrons-right", size=18),
-                    on_click=TableState.last_page,
+                    on_click=ReglasState.last_page,
                     opacity=rx.cond(
-                        TableState.page_number == TableState.total_pages, 0.6, 1
+                        ReglasState.page_number == ReglasState.total_pages, 0.6, 1
                     ),
                     color_scheme=rx.cond(
-                        TableState.page_number == TableState.total_pages,
+                        ReglasState.page_number == ReglasState.total_pages,
                         "gray",
                         "accent",
                     ),
@@ -133,10 +132,10 @@ def file_upload_reglas() -> rx.Component:
                 _hover={"background_color": "#D1D5DB"},
             ),
             multiple=False,
-            on_drop=TableState.handle_upload_reglas,
+            on_drop=ReglasState.handle_upload_reglas,
         ),
         rx.cond(
-            TableState.upload_success,
+            ReglasState.upload_success,
             rx.text("Archivo subido y procesado correctamente.", color="green", margin_top="1rem"),
             rx.text("Esperando archivo...", color="#374151", margin_top="1rem"),  # Texto oscuro para contraste
         ),
@@ -158,14 +157,14 @@ def main_table() -> rx.Component:
             rx.flex(
                 #condicional para cambiar el orden de los iconos de ordenar la tabla 
                 rx.cond(
-                    TableState.sort_reverse_reglas,
+                    ReglasState.sort_reverse_reglas,
                     rx.icon(
                         "arrow-down-z-a",
                         size=28,
                         stroke_width=1.5,
                         cursor="pointer",
                         flex_shrink="0",
-                        on_click=TableState.toggle_sort_reglas,
+                        on_click=ReglasState.toggle_sort_reglas,
                     ),
                     rx.icon(
                         "arrow-down-a-z",
@@ -173,7 +172,7 @@ def main_table() -> rx.Component:
                         stroke_width=1.5,
                         cursor="pointer",
                         flex_shrink="0",
-                        on_click=TableState.toggle_sort_reglas,
+                        on_click=ReglasState.toggle_sort_reglas,
                     ),
                 ),
                 #todo pa buscar
@@ -183,17 +182,17 @@ def main_table() -> rx.Component:
                     rx.icon("eraser"),
                     justify="end",
                     cursor="pointer",
-                    on_click=TableState.setvar("search_value_reglas", ""),
-                    display=rx.cond(TableState.search_value_reglas, "flex", "none"),
+                    on_click=ReglasState.setvar("search_value_reglas", ""),
+                    display=rx.cond(ReglasState.search_value_reglas, "flex", "none"),
                 ),
-                value=TableState.search_value_reglas,
+                value=ReglasState.search_value_reglas,
                 placeholder="Buscar en la tabla...",
                 size="3",
                 max_width=["150px", "150px", "200px", "250px"],
                 width="100%",
                 variant="surface",
                 color_scheme="gray",
-                on_change=lambda value: TableState.setvar("search_value_reglas", value),
+                on_change=lambda value: ReglasState.setvar("search_value_reglas", value),
                 ),
                 align="center",
                 justify="end",
@@ -241,7 +240,7 @@ def main_table() -> rx.Component:
             ),
             rx.table.body( 
                 rx.foreach(
-                    TableState.get_current_page_reglas,
+                    ReglasState.get_current_page_reglas,
                     lambda item, index: _show_item_reglas(item, index),
                 ),
                 _show_buttons_row(),

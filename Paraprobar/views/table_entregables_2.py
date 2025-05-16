@@ -1,7 +1,7 @@
 import reflex as rx
 
-from ..models.excel_data import Entregables,vistaentregablesproyectos
-from ..backend.table_state import TableState
+from ..models.entregables import vistaentregablesproyectos
+from ..backend.entragables_state import EntragablesState
 import os
 
 # Obtener el nombre de usuario de la PC
@@ -16,7 +16,7 @@ def _header_cell(text: str, icon: str = None, options: list[str] = None, style: 
 
     # Función para manejar el cambio en el select
     def handle_filter_change(value: str):
-        return TableState.set_filter(text, value)
+        return EntragablesState.set_filter(text, value)
 
     return rx.table.column_header_cell(
         rx.hstack(
@@ -29,9 +29,9 @@ def _header_cell(text: str, icon: str = None, options: list[str] = None, style: 
                     
                     on_change=handle_filter_change,
                     value=rx.cond(
-                        TableState.filters.get(text) == "",
+                        EntragablesState.filters.get(text) == "",
                         "",
-                        TableState.filters.get(text, "")
+                        EntragablesState.filters.get(text, "")
                     ),
                     width="0px 0px 10px 0px",
                 ),
@@ -107,41 +107,39 @@ def _show_item_entregables(item: vistaentregablesproyectos, index: int) -> rx.Co
         align="center",
     )
 
-
-
 #sin decir pa la paginacion
 def _pagination_view() -> rx.Component:
     return (
         rx.hstack(
             rx.text(
                 "Page ",
-                rx.code(TableState.page_number),
-                f" of {TableState.total_pages}",
+                rx.code(EntragablesState.page_number),
+                f" of {EntragablesState.total_pages}",
                 justify="end",
             ),
             rx.hstack(
                 rx.icon_button(
                     rx.icon("chevrons-left", size=18),
-                    on_click=TableState.first_page,
-                    opacity=rx.cond(TableState.page_number == 1, 0.6, 1),
-                    color_scheme=rx.cond(TableState.page_number == 1, "gray", "accent"),
+                    on_click=EntragablesState.first_page,
+                    opacity=rx.cond(EntragablesState.page_number == 1, 0.6, 1),
+                    color_scheme=rx.cond(EntragablesState.page_number == 1, "gray", "accent"),
                     variant="soft",
                 ),
                 rx.icon_button(
                     rx.icon("chevron-left", size=18),
-                    on_click=TableState.prev_page,
-                    opacity=rx.cond(TableState.page_number == 1, 0.6, 1),
-                    color_scheme=rx.cond(TableState.page_number == 1, "gray", "accent"),
+                    on_click=EntragablesState.prev_page,
+                    opacity=rx.cond(EntragablesState.page_number == 1, 0.6, 1),
+                    color_scheme=rx.cond(EntragablesState.page_number == 1, "gray", "accent"),
                     variant="soft",
                 ),
                 rx.icon_button(
                     rx.icon("chevron-right", size=18),
-                    on_click=TableState.next_page,
+                    on_click=EntragablesState.next_page,
                     opacity=rx.cond(
-                        TableState.page_number == TableState.total_pages, 0.6, 1
+                        EntragablesState.page_number == EntragablesState.total_pages, 0.6, 1
                     ),
                     color_scheme=rx.cond(
-                        TableState.page_number == TableState.total_pages,
+                        EntragablesState.page_number == EntragablesState.total_pages,
                         "gray",
                         "accent",
                     ),
@@ -149,12 +147,12 @@ def _pagination_view() -> rx.Component:
                 ),
                 rx.icon_button(
                     rx.icon("chevrons-right", size=18),
-                    on_click=TableState.last_page,
+                    on_click=EntragablesState.last_page,
                     opacity=rx.cond(
-                        TableState.page_number == TableState.total_pages, 0.6, 1
+                        EntragablesState.page_number == EntragablesState.total_pages, 0.6, 1
                     ),
                     color_scheme=rx.cond(
-                        TableState.page_number == TableState.total_pages,
+                        EntragablesState.page_number == EntragablesState.total_pages,
                         "gray",
                         "accent",
                     ),
@@ -201,13 +199,13 @@ def file_upload_entregables() -> rx.Component:
                 ),
                 
                 multiple=False,
-                on_drop=TableState.handle_upload_entregables,
+                on_drop=EntragablesState.handle_upload_entregables,
                 max_size=100_000_000,
                 
 
             ),
             rx.cond(
-                TableState.upload_success,
+                EntragablesState.upload_success,
                 rx.text("Archivo subido y procesado correctamente.", color="green", margin_top="1rem"),
                 rx.text("Esperando archivo....", color="#374151", margin_top="1rem"),  # Texto oscuro para contraste
                 
@@ -234,12 +232,18 @@ def main_table_2() -> rx.Component:
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=lambda: TableState.set_search_value_entregables(""),
-                        display=rx.cond(TableState.search_value_entregables, "flex", "none"),
+                        on_click=lambda: [
+                            EntragablesState.set_search_value_entregables(""),
+                            EntragablesState.perform_search("")  # Limpiar la búsqueda también
+                        ],
+                        display=rx.cond(EntragablesState.search_value_entregables, "flex", "none"),
                     ),
-                    value=TableState.search_value_entregables,
+                    value=EntragablesState.search_value_entregables,
                     placeholder="Buscar por entregables",
-                    on_change=TableState.set_search_value_entregables,
+                    on_change=lambda value: [
+                        EntragablesState.set_search_value_entregables(value),
+                        EntragablesState.perform_search(value)
+                    ],
                     width="100%",
                 ),
                 align="center",
@@ -278,11 +282,11 @@ def main_table_2() -> rx.Component:
                     rx.table.row(
                         
                         _header_cell("ID", style={"padding": "13px 6px 12px 9px"}),
-                        _header_cell("Cod Pry", options=TableState.unique_codigo_proyectos_cod_pry, style={"padding": "13px 6px 12px 9px"}),
-                        _header_cell("Cliente", options=TableState.unique_codigo_proyectos_cliente, style={"padding": "13px 6px 12px 9px"}),
-                        _header_cell("Proyecto", options=TableState.unique_codigo_proyectos_nom_proy, style={"padding": "13px 6px 12px 9px"}),
-                        _header_cell("Disciplina", options=TableState.unique_codigo_proyectos_disciplina, style={"padding": "13px 6px 12px 9px"}),
-                        _header_cell("Tipo Entrgbl", options=TableState.unique_codigo_proyectos_tip_entre, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Cod Pry", options=EntragablesState.unique_codigo_proyectos_cod_pry, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Cliente", options=EntragablesState.unique_codigo_proyectos_cliente, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Proyecto", options=EntragablesState.unique_codigo_proyectos_nom_proy, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Disciplina", options=EntragablesState.unique_codigo_proyectos_disciplina, style={"padding": "13px 6px 12px 9px"}),
+                        _header_cell("Tipo Entrgbl", options=EntragablesState.unique_codigo_proyectos_tip_entre, style={"padding": "13px 6px 12px 9px"}),
                         _header_cell("Codigo Entrgbl", style={"padding": "13px 6px 12px 9px", "paddingRight": "210px"}),  # Se mantiene la personalización
                         _header_cell("Nombre Entrgbl", style={"padding": "13px 6px 12px 9px"}),
                         _header_cell("HH Venta", style={"padding": "13px 6px 12px 9px"}),
@@ -292,7 +296,7 @@ def main_table_2() -> rx.Component:
                 ),
                 rx.table.body(
                     rx.foreach(
-                        TableState.get_current_page_entregables,
+                        EntragablesState.get_current_page_entregables,
                         lambda item, index: _show_item_entregables(item, index),
                     ),
                     style={"fontSize": "0.9rem"}
@@ -304,6 +308,154 @@ def main_table_2() -> rx.Component:
             overflow_x="auto",
             max_width="100%",
             id="scroll-bottom",
+        ),
+        _pagination_view(),
+        # Sección de resultados de búsqueda dinámica
+        rx.box(
+            rx.cond(
+                EntragablesState.search_value_entregables != "",
+                rx.vstack(
+                    rx.heading(
+                        "Resultados en contenido de entregables", 
+                        size="6",
+                        color="slate.800",
+                        font_weight="semibold",
+                        padding_bottom="0.5em"
+                    ),
+                    rx.box(
+                        rx.text(
+                            f"Búsqueda: '{EntragablesState.search_value_entregables}'", 
+                            size="2", 
+                            color="slate.500",
+                            font_style="italic"
+                        ),
+                        padding_bottom="1em"
+                    ),
+                    rx.divider(border_color="slate.200"),
+                    
+                    rx.cond(
+                        EntragablesState.elasticsearch_loading,
+                        rx.center(
+                            rx.spinner(
+                                size="3",
+                                color="blue.500",
+                                thickness="3px",
+                                speed="1s"
+                            ), 
+                            padding="6"
+                        ),
+                        
+                        rx.box(
+                            rx.cond(
+                                EntragablesState.elasticsearch_error,
+                                rx.callout(
+                                    EntragablesState.elasticsearch_error,
+                                    icon="alert-triangle",
+                                    color_scheme="red",
+                                    width="100%",
+                                    variant="soft",
+                                    margin_bottom="1em"
+                                ),
+                                rx.fragment()
+                            ),
+                            
+                            rx.cond(
+                                EntragablesState.elasticsearch_results.length() > 0,
+                                rx.vstack(
+                                    rx.foreach(
+                                        EntragablesState.elasticsearch_results,
+                                        lambda item: rx.card(
+                                            rx.vstack(
+                                                rx.hstack(
+                                                    rx.badge(
+                                                        "Código de Entregable:",
+                                                        color_scheme="blue",
+                                                        variant="soft"
+                                                    ),
+                                                    rx.text(
+                                                        item["codigo"],
+                                                        weight="medium"
+                                                    ),
+                                                    rx.badge(
+                                                        "Página:",
+                                                        color_scheme="blue",
+                                                        variant="soft"
+                                                    ),
+                                                    rx.text(
+                                                        item["pagina"],
+                                                        weight="medium"
+                                                    ),
+                                                    spacing="3",
+                                                    align="center"
+                                                ),
+                                                rx.divider(border_color="slate.100"),
+                                                rx.box(
+                                                    rx.cond(
+                                                        item["highlight"],
+                                                        rx.html(
+                                                            item["highlight"],
+                                                            style={
+                                                                "line-height": "1.5",
+                                                                "font-size": "0.9em"
+                                                            }
+                                                        ),
+                                                        rx.text(
+                                                            item["texto"], 
+                                                            color="slate.600",
+                                                            size="2"
+                                                        )
+                                                    ),
+                                                    padding="3",
+                                                    bg="slate.50",
+                                                    border_radius="lg",
+                                                ),
+                                                rx.link(
+                                                    rx.button(
+                                                        rx.text("Ver PDF en página "), 
+                                                        rx.text(item["pagina"]),
+                                                        size="2",
+                                                        variant="solid",
+                                                        color_scheme="blue",
+                                                        right_icon="arrow-up-right"
+                                                    ),
+                                                    href=item["enlace"],
+                                                    is_external=True
+                                                ),
+                                                spacing="3",
+                                                padding="0.5em"
+                                            ),
+                                            width="100%",
+                                            margin_bottom="1.5em",
+                                            box_shadow="sm",
+                                            _hover={
+                                                "box_shadow": "md",
+                                                "transform": "translateY(-2px)",
+                                                "transition": "all 0.2s"
+                                            }
+                                        )
+                                    ),
+                                    spacing="3",  # El spacing debe estar en el vstack que contiene el foreach
+                                    width="100%",
+                                    padding_top="0.5em"
+                                ),
+                                
+                                rx.callout(
+                                    "No se encontraron resultados para esta búsqueda",
+                                    icon="info",
+                                    color_scheme="blue",
+                                    variant="soft",
+                                    width="100%"
+                                )
+                            )
+                        )
+                    ),
+                    spacing="4",
+                    width="100%"
+                )
+            ),
+            margin_top="2.5em",
+            padding_x="1em",
+            width="100%"
         ),
         width="100%",
     )

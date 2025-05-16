@@ -1,8 +1,7 @@
 import reflex as rx
 
-from ..models.excel_data import Proyectos
-from ..backend.table_state import TableState
-from ..components.status_badge import status_badge
+from ..models.proyectos import Proyectos
+from ..backend.proyectos_state import ProyectosState
 
 #personalizacion del encabezado de tabla
 def _header_cell(text: str, icon: str) -> rx.Component:
@@ -58,33 +57,33 @@ def _pagination_view() -> rx.Component:
         rx.hstack(
             rx.text(
                 "Page ",
-                rx.code(TableState.page_number),
-                f" of {TableState.total_pages}",
+                rx.code(ProyectosState.page_number),
+                f" of {ProyectosState.total_pages}",
                 justify="end",
             ),
             rx.hstack(
                 rx.icon_button(
                     rx.icon("chevrons-left", size=18),
-                    on_click=TableState.first_page,
-                    opacity=rx.cond(TableState.page_number == 1, 0.6, 1),
-                    color_scheme=rx.cond(TableState.page_number == 1, "gray", "accent"),
+                    on_click=ProyectosState.first_page,
+                    opacity=rx.cond(ProyectosState.page_number == 1, 0.6, 1),
+                    color_scheme=rx.cond(ProyectosState.page_number == 1, "gray", "accent"),
                     variant="soft",
                 ),
                 rx.icon_button(
                     rx.icon("chevron-left", size=18),
-                    on_click=TableState.prev_page,
-                    opacity=rx.cond(TableState.page_number == 1, 0.6, 1),
-                    color_scheme=rx.cond(TableState.page_number == 1, "gray", "accent"),
+                    on_click=ProyectosState.prev_page,
+                    opacity=rx.cond(ProyectosState.page_number == 1, 0.6, 1),
+                    color_scheme=rx.cond(ProyectosState.page_number == 1, "gray", "accent"),
                     variant="soft",
                 ),
                 rx.icon_button(
                     rx.icon("chevron-right", size=18),
-                    on_click=TableState.next_page,
+                    on_click=ProyectosState.next_page,
                     opacity=rx.cond(
-                        TableState.page_number == TableState.total_pages, 0.6, 1
+                        ProyectosState.page_number == ProyectosState.total_pages, 0.6, 1
                     ),
                     color_scheme=rx.cond(
-                        TableState.page_number == TableState.total_pages,
+                        ProyectosState.page_number == ProyectosState.total_pages,
                         "gray",
                         "accent",
                     ),
@@ -92,12 +91,12 @@ def _pagination_view() -> rx.Component:
                 ),
                 rx.icon_button(
                     rx.icon("chevrons-right", size=18),
-                    on_click=TableState.last_page,
+                    on_click=ProyectosState.last_page,
                     opacity=rx.cond(
-                        TableState.page_number == TableState.total_pages, 0.6, 1
+                        ProyectosState.page_number == ProyectosState.total_pages, 0.6, 1
                     ),
                     color_scheme=rx.cond(
-                        TableState.page_number == TableState.total_pages,
+                        ProyectosState.page_number == ProyectosState.total_pages,
                         "gray",
                         "accent",
                     ),
@@ -137,10 +136,10 @@ def file_upload_proyectos() -> rx.Component:
                 _hover={"background_color": "#D1D5DB"},
             ),
             multiple=False,
-            on_drop=TableState.handle_upload_proyectos,
+            on_drop=ProyectosState.handle_upload_proyectos,
         ),
         rx.cond(
-            TableState.upload_success,
+            ProyectosState.upload_success,
             rx.text("Archivo subido y procesado correctamente.", color="green", margin_top="1rem"),
             rx.text("Esperando archivo...", color="#374151", margin_top="1rem"),  # Texto oscuro para contraste
         ),
@@ -162,14 +161,14 @@ def main_table() -> rx.Component:
             rx.flex(
                 #condicional para cambiar el orden de los iconos de ordenar la tabla 
                 rx.cond(
-                    TableState.sort_reverse_proyectos,
+                    ProyectosState.sort_reverse_proyectos,
                     rx.icon(
                         "arrow-down-z-a",
                         size=28,
                         stroke_width=1.5,
                         cursor="pointer",
                         flex_shrink="0",
-                        on_click=TableState.toggle_sort_proyectos,
+                        on_click=ProyectosState.toggle_sort_proyectos,
                     ),
                     rx.icon(
                         "arrow-down-a-z",
@@ -177,7 +176,7 @@ def main_table() -> rx.Component:
                         stroke_width=1.5,
                         cursor="pointer",
                         flex_shrink="0",
-                        on_click=TableState.toggle_sort_proyectos,
+                        on_click=ProyectosState.toggle_sort_proyectos,
                     ),
                 ),
                 #todo pa buscar
@@ -187,17 +186,17 @@ def main_table() -> rx.Component:
                         rx.icon("eraser"),
                         justify="end",
                         cursor="pointer",
-                        on_click=TableState.setvar("search_value_proyectos", ""),
-                        display=rx.cond(TableState.search_value_proyectos, "flex", "none"),
+                        on_click=ProyectosState.setvar("search_value_proyectos", ""),
+                        display=rx.cond(ProyectosState.search_value_proyectos, "flex", "none"),
                     ),
-                    value=TableState.search_value_proyectos,
+                    value=ProyectosState.search_value_proyectos,
                     placeholder="Search by the first 5 columns",
                     size="3",
                     max_width=["450px", "500px", "550px", "600px"],  # Increased max_width values
                     width="100%",
                     variant="surface",
                     color_scheme="gray",
-                    on_change=lambda value: TableState.setvar("search_value_proyectos", value),
+                    on_change=lambda value: ProyectosState.setvar("search_value_proyectos", value),
                 ),
                 align="center",
                 justify="end",
@@ -246,7 +245,7 @@ def main_table() -> rx.Component:
             ),
             rx.table.body( 
                 rx.foreach(
-                    TableState.get_current_page_proyectosA,
+                    ProyectosState.get_current_page_proyectosA,
                     lambda item, index: _show_item_proyectos(item, index),
                 ),
                 style={"fontSize": "0.9rem"}

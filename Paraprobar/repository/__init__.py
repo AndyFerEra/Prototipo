@@ -1,1 +1,1 @@
-from .database import select_all,select_all_reglas,select_all_proyectos,select_all_entregables_2,lafeeeeeeeeeeeee
+from .database import select_all_reglas,select_all_proyectos,select_all_entregables_2,lafeeeeeeeeeeeee

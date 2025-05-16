@@ -1,10 +1,12 @@
 import reflex as rx
 
-from ..backend.table_state import TableState
+from ..backend.entragables_state import EntragablesState
 from ..templates import template
 from ..views.table_reglas import file_upload_reglas
 from ..views.table_proyectos import file_upload_proyectos
 from ..views.table_entregables_2 import file_upload_entregables
+
+#Esto es para poder subir datos en los excels, 
 
 try:
     @template(route="/agregarEntregables", title="Agregar Entregables")
@@ -14,7 +16,7 @@ try:
                 rx.heading("Subir el excel de datos para los entregables", size="5"),
                 rx.button(
                     "REGRESAR",
-                    on_click=TableState.reset_upload_state_entregables,
+                    on_click=EntragablesState.reset_upload_state_entregables,
                     color_scheme="blue",
                     variant="solid",
                     size="2", 

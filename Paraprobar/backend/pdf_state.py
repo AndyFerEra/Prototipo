@@ -4,9 +4,8 @@ from ultralytics import YOLO
 from typing import List
 from ..repository.database import get_session
 from ..backend.pdf_processor import process_pdf
-from ..models.excel_data import Entregables
+from ..models.entregables import Entregables
 from .constans import map_disciplinas, map_clasificacion_entregable, map_tipo_entregable
-from ..models.excel_data import Proyectos
 from typing import Optional
 import fitz  # PyMuPDF
 import cv2

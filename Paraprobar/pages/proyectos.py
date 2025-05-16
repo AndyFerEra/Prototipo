@@ -1,12 +1,12 @@
 
 import reflex as rx
 
-from ..backend.table_state import TableState
+from ..backend.proyectos_state import ProyectosState
 from ..templates import template
 from ..views.table_proyectos import main_table
 
 
-@template(route="/proyectos", title="Proyectos",on_load=TableState.load_entries_proyectos)
+@template(route="/proyectos", title="Proyectos",on_load=ProyectosState.load_entries_proyectos)
 def proyectos() -> rx.Component:
 
     return rx.vstack(

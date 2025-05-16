@@ -1,10 +1,10 @@
 import reflex as rx
 from ..templates import template
 from ..views.table_entregables_2 import main_table_2
-from ..backend.table_state import TableState
+from ..backend.entragables_state import EntragablesState
 
 
-@template(route="/", title="Entregables", on_load=[TableState.load_entries_entregables])
+@template(route="/", title="Entregables", on_load=[EntragablesState.load_entries_entregables])
 def entregables_2() -> rx.Component:
 
     return rx.vstack(

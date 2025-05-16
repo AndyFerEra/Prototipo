@@ -1,12 +1,12 @@
 
 import reflex as rx
 
-from ..backend.table_state import TableState
+from ..backend.reglas_state import ReglasState
 from ..templates import template
 from ..views.table_reglas import main_table
 
 
-@template(route="/reglas", title="Reglas",on_load=TableState.load_entries_reglas)
+@template(route="/reglas", title="Reglas",on_load=ReglasState.load_entries_reglas)
 def reglas() -> rx.Component:
 
     return rx.vstack(

@@ -9,7 +9,7 @@ from ..views.scaling_picker import scaling_picker
 
 @template(route="/settings", title="Reglas")
 def settings() -> rx.Component:
- 
+
     return rx.vstack(
         rx.heading("Settings", size="5"),
         # Primary color picker

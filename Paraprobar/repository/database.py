@@ -1,5 +1,7 @@
 from sqlmodel import asc, create_engine, Session, select,SQLModel
-from ..models.excel_data import ExcelData,Reglas,Proyectos,Entregables,vistaentregablesproyectos
+from ..models.entregables import Entregables,vistaentregablesproyectos
+from ..models.proyectos import Proyectos
+from ..models.reglas import Reglas
 from urllib.parse import quote_plus
 
 
@@ -26,15 +28,6 @@ def get_session():
     except Exception as e:
         print(f"Error al crear la sesión: {e}")
         return None
-# Obtener todos los registros de la tabla "Entregable"
-
-    
-#prueba
-def select_all():
-    with Session(engine) as session:
-        statement = select(ExcelData)
-        results = session.exec(statement)
-        return results.all()
 
 #tabla reglas
 def select_all_reglas():
